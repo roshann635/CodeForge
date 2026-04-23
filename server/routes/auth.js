@@ -1,8 +1,10 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { Resend } = require('resend');
 
 const router = express.Router();
+const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'codeforge_hackathon_super_secret_key_123!';
 
@@ -72,6 +74,89 @@ router.post('/login', async (req, res) => {
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
         }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @desc    Forgot Password (Send OTP)
+// @route   POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Generate 6 digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        user.resetOtp = otp;
+        user.resetOtpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+        await user.save();
+
+        if (process.env.RESEND_API_KEY) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+                to: user.email,
+                subject: 'CodeForge - Password Reset OTP',
+                html: `
+                    <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
+                        <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Password Reset</h2>
+                        <p>Operator, we received a request to reset your password.</p>
+                        <p>Your authentication code is:</p>
+                        <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
+                        <p>This code will self-destruct in 10 minutes.</p>
+                        <p style="color: #888; font-size: 12px; margin-top: 10px;">If you did not request this, ignore this email.</p>
+                    </div>
+                `,
+            });
+        } else {
+            console.log("Mock Email Sent. OTP:", otp); // For local testing without API key
+        }
+
+        res.json({ message: 'OTP sent to email' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @desc    Verify OTP
+// @route   POST /api/auth/verify-otp
+router.post('/verify-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user || user.resetOtp !== otp || user.resetOtpExpires < Date.now()) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        res.json({ message: 'OTP verified successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @desc    Reset Password
+// @route   POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user || user.resetOtp !== otp || user.resetOtpExpires < Date.now()) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        user.password = newPassword; // Will be hashed by pre-save hook in User model
+        user.resetOtp = undefined;
+        user.resetOtpExpires = undefined;
+        await user.save();
+
+        res.json({ message: 'Password reset successful' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

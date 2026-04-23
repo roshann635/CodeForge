@@ -19,6 +19,12 @@ const UserSchema = new mongoose.Schema({
     required: true,
     minlength: 6,
   },
+  resetOtp: {
+    type: String,
+  },
+  resetOtpExpires: {
+    type: Date,
+  },
   gamification: {
     xp: { type: Number, default: 0 },
     rankTier: { type: String, enum: ['Bronze', 'Silver', 'Gold', 'Diamond', 'CodeForge Elite'], default: 'Bronze' },

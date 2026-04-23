@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import VoicePanel from "../components/VoicePanel";
-import { Play, Send, CheckCircle, Code, MessageSquare, Zap, Activity, ShieldAlert, Cpu, Award } from "lucide-react";
+import ProctoringPanel from "../components/ProctoringPanel";
+import { Play, Send, CheckCircle, Code, MessageSquare, Zap, Activity, ShieldAlert, Cpu, Award, Shield, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 const QUESTIONS = {
@@ -65,18 +66,23 @@ const QUESTIONS = {
 
 export default function InterviewPrep() {
   const [topic, setTopic] = useState("Binary Search");
+  const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState("// Write your solution here\n");
   const [transcript, setTranscript] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
-  
+  const [proctorActive, setProctorActive] = useState(true);
+  const [integrityScore, setIntegrityScore] = useState(100);
+  const [violationLog, setViolationLog] = useState([]);
+  const [tabSwitchWarning, setTabSwitchWarning] = useState(false);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+
   // Timer logic
   const [thinkingTime, setThinkingTime] = useState(0);
   const [isThinking, setIsThinking] = useState(true);
   const timerRef = useRef(null);
 
   useEffect(() => {
-    // Start thinking timer
     timerRef.current = setInterval(() => {
       if (isThinking) {
         setThinkingTime(prev => prev + 1000);
@@ -84,6 +90,29 @@ export default function InterviewPrep() {
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [isThinking]);
+
+  // Tab switch blocking — show warning overlay when user switches tabs
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setTabSwitchCount(prev => prev + 1);
+        setTabSwitchWarning(true);
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = "You are in an active interview session. Are you sure you want to leave?";
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   const handleEditorChange = (value) => {
     setCode(value);
@@ -94,23 +123,38 @@ export default function InterviewPrep() {
     setIsAnalyzing(true);
     setIsThinking(false);
     try {
-      const resp = await fetch("http://localhost:5000/api/analyze", {
+      const resp = await fetch("http://localhost:5000/api/interview/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           transcript,
           topic,
           code,
-          thinkingTime
+          thinkingTime,
+          language
         })
       });
       const data = await resp.json();
-      setResult(data);
+
+      // Adjust final score based on proctoring integrity
+      const adjustedData = {
+        ...data,
+        integrityScore,
+        tabSwitches: tabSwitchCount,
+        violationCount: violationLog.length,
+        // Deduct from final score based on malpractice
+        adjustedFinalScore: Math.max(0, Math.round(data.finalScore * (integrityScore / 100))),
+      };
+      setResult(adjustedData);
 
       const history = JSON.parse(localStorage.getItem("interview_history") || "[]");
       history.push({
         topic,
-        finalScore: data.finalScore,
+        finalScore: adjustedData.adjustedFinalScore,
+        rawScore: data.finalScore,
+        integrityScore,
+        tabSwitches: tabSwitchCount,
+        violations: violationLog.length,
         thinkingTime,
         date: new Date().toISOString()
       });
@@ -120,6 +164,10 @@ export default function InterviewPrep() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleViolation = (violation) => {
+    setViolationLog(prev => [...prev, violation]);
   };
 
   const getColor = (score) => {
@@ -134,158 +182,215 @@ export default function InterviewPrep() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 text-white p-2">
-      <div className="flex justify-between items-center mb-2">
-         <div className="flex items-center gap-4">
-           <h2 className="text-2xl font-orbitron font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan to-neon-purple text-glow-cyan">
-             Interview Prep Sim
-           </h2>
-           <select 
-             value={topic}
-             onChange={(e) => {
-               setTopic(e.target.value);
-               setResult(null);
-               setCode("// Write your solution here\n");
-               setThinkingTime(0);
-               setIsThinking(true);
-             }}
-             className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded text-sm font-mono focus:border-neon-cyan outline-none transition-colors"
-           >
-             {Object.keys(QUESTIONS).map(q => (
-               <option key={q} value={q}>{q}</option>
-             ))}
-           </select>
-         </div>
-         <div className="flex gap-4 items-center">
-            <span className="text-sm font-mono text-gray-400">
-               Thinking Time: {(thinkingTime / 1000).toFixed(0)}s
+    <div className="h-[calc(100vh-4rem)] flex flex-col gap-3 text-white p-2 relative">
+      {/* Tab Switch Warning Overlay */}
+      {tabSwitchWarning && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setTabSwitchWarning(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-dark-800 border-2 border-red-500/60 rounded-2xl p-8 max-w-md text-center shadow-[0_0_60px_rgba(239,68,68,0.3)]"
+          >
+            <AlertTriangle size={64} className="mx-auto text-red-500 mb-4" />
+            <h2 className="text-2xl font-orbitron font-bold text-red-400 mb-3">
+              ⚠️ TAB SWITCH DETECTED
+            </h2>
+            <p className="text-gray-300 mb-2 text-sm">
+              Switching tabs during an interview is a <strong className="text-red-400">serious violation</strong>.
+            </p>
+            <p className="text-gray-500 text-xs mb-4">
+              This has been logged. Total tab switches: <span className="text-red-400 font-bold">{tabSwitchCount}</span>
+            </p>
+            <div className="bg-red-500/10 border border-red-500/40 rounded-lg p-3 mb-4">
+              <p className="text-red-300 text-xs font-mono">
+                Integrity Impact: <span className="font-bold">-5 points per switch</span>
+              </p>
+            </div>
+            <button
+              onClick={() => setTabSwitchWarning(false)}
+              className="px-6 py-2 bg-red-500/20 text-red-400 border border-red-500/50 rounded-xl font-bold font-orbitron text-sm hover:bg-red-500/30 transition-all"
+            >
+              RETURN TO INTERVIEW
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-orbitron font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan to-neon-purple text-glow-cyan">
+            Interview Prep Sim
+          </h2>
+          <select
+            value={topic}
+            onChange={(e) => {
+              setTopic(e.target.value);
+              setResult(null);
+              setCode("// Write your solution here\n");
+              setThinkingTime(0);
+              setIsThinking(true);
+            }}
+            className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded text-sm font-mono focus:border-neon-cyan outline-none transition-colors"
+          >
+            {Object.keys(QUESTIONS).map(q => (
+              <option key={q} value={q}>{q}</option>
+            ))}
+          </select>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded text-sm font-mono focus:border-neon-purple outline-none transition-colors"
+          >
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="cpp">C++</option>
+          </select>
+        </div>
+        <div className="flex gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <Shield size={14} className={integrityScore >= 80 ? "text-neon-green" : integrityScore >= 50 ? "text-neon-yellow" : "text-red-400"} />
+            <span className={`text-sm font-mono font-bold ${integrityScore >= 80 ? "text-neon-green" : integrityScore >= 50 ? "text-neon-yellow" : "text-red-400"}`}>
+              {integrityScore}%
             </span>
-         </div>
+          </div>
+          {tabSwitchCount > 0 && (
+            <span className="text-xs text-red-400 font-mono flex items-center gap-1">
+              <AlertTriangle size={12} /> {tabSwitchCount} tab switch{tabSwitchCount !== 1 ? "es" : ""}
+            </span>
+          )}
+          <span className="text-sm font-mono text-gray-400">
+            Thinking: {(thinkingTime / 1000).toFixed(0)}s
+          </span>
+        </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-        
+      {/* Main Grid — 4 columns: Problem | Editor | Voice | Proctor */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-3 min-h-0">
+
         {/* Left Panel: Problem Statement */}
-        <div className="glass-panel p-5 border border-dark-600 flex flex-col overflow-y-auto">
-          <h3 className="text-lg font-bold font-orbitron text-neon-cyan mb-4">{QUESTIONS[topic].title}</h3>
-          <p className="text-gray-300 text-sm mb-4 leading-relaxed font-mono">
+        <div className="glass-panel p-4 border border-dark-600 flex flex-col overflow-y-auto">
+          <h3 className="text-lg font-bold font-orbitron text-neon-cyan mb-3">{QUESTIONS[topic].title}</h3>
+          <p className="text-gray-300 text-sm mb-3 leading-relaxed font-mono">
             {QUESTIONS[topic].description}
           </p>
-          <div className="bg-dark-900 border border-dark-700 p-3 rounded mb-4">
-             <p className="text-xs font-mono text-gray-400">Example Output</p>
-             <p className="text-sm text-neon-yellow mt-1">Input: {QUESTIONS[topic].exampleInput}</p>
-             <p className="text-sm text-neon-yellow">Output: {QUESTIONS[topic].exampleOutput}</p>
+          <div className="bg-dark-900 border border-dark-700 p-3 rounded mb-3">
+            <p className="text-xs font-mono text-gray-400">Example</p>
+            <p className="text-sm text-neon-yellow mt-1">Input: {QUESTIONS[topic].exampleInput}</p>
+            <p className="text-sm text-neon-yellow">Output: {QUESTIONS[topic].exampleOutput}</p>
           </div>
-          <div className="bg-dark-900 border border-dark-700 p-3 rounded mb-4">
-             <p className="text-xs font-mono text-gray-400">Constraints</p>
-             <ul className="text-sm text-gray-400 list-disc pl-4 mt-2">
-                {QUESTIONS[topic].constraints.map((c, i) => <li key={i}>{c}</li>)}
-             </ul>
+          <div className="bg-dark-900 border border-dark-700 p-3 rounded">
+            <p className="text-xs font-mono text-gray-400">Constraints</p>
+            <ul className="text-sm text-gray-400 list-disc pl-4 mt-1">
+              {QUESTIONS[topic].constraints.map((c, i) => <li key={i}>{c}</li>)}
+            </ul>
           </div>
         </div>
 
         {/* Center Panel: Editor */}
-        <div className="glass-panel border border-dark-600 flex flex-col relative overflow-hidden group">
-           <div className="flex justify-between items-center p-2 bg-dark-800 border-b border-dark-600">
-              <span className="text-xs font-bold font-orbitron text-gray-400 flex items-center gap-2"><Code size={14}/> SOLUTION IDE</span>
-              <div className="flex gap-2">
-                 <button className="bg-dark-700 hover:bg-dark-600 p-1.5 rounded transition-colors" onClick={handleAnalyze} disabled={isAnalyzing}><Play size={14} className="text-neon-cyan" /></button>
-                 <button className="bg-neon-cyan/20 hover:bg-neon-cyan/30 text-neon-cyan p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold font-orbitron" onClick={handleAnalyze} disabled={isAnalyzing}><Send size={14}/> SUBMIT</button>
-              </div>
-           </div>
-           
-           <div 
-             className="flex-1 w-full"
-             onPaste={(e) => { e.preventDefault(); alert("Pasting strictly restricted in Interview Mode."); }}
-             onCopy={(e) => { e.preventDefault(); alert("Copying strictly restricted in Interview Mode."); }}
-           >
-             <Editor
+        <div className="glass-panel border border-dark-600 flex flex-col relative overflow-hidden group lg:col-span-2">
+          <div className="flex justify-between items-center p-2 bg-dark-800 border-b border-dark-600">
+            <span className="text-xs font-bold font-orbitron text-gray-400 flex items-center gap-2"><Code size={14}/> SOLUTION IDE</span>
+            <div className="flex gap-2">
+              <button className="bg-dark-700 hover:bg-dark-600 p-1.5 rounded transition-colors" onClick={handleAnalyze} disabled={isAnalyzing}><Play size={14} className="text-neon-cyan" /></button>
+              <button className="bg-neon-cyan/20 hover:bg-neon-cyan/30 text-neon-cyan p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold font-orbitron" onClick={handleAnalyze} disabled={isAnalyzing}><Send size={14}/> SUBMIT</button>
+            </div>
+          </div>
+
+          <div
+            className="flex-1 w-full"
+            onPaste={(e) => { e.preventDefault(); alert("Pasting strictly restricted in Interview Mode."); }}
+            onCopy={(e) => { e.preventDefault(); alert("Copying strictly restricted in Interview Mode."); }}
+          >
+            <Editor
               height="100%"
-              defaultLanguage="javascript"
+              language={language === "cpp" ? "cpp" : language}
               value={code}
               theme="vs-dark"
               onChange={handleEditorChange}
-              options={{ minimap: { enabled: false }, fontSize: 14 }}
-             />
-           </div>
+              options={{ minimap: { enabled: false }, fontSize: 14, fontFamily: "Fira Code, monospace" }}
+            />
+          </div>
+
+          {/* Evaluation Results — below editor */}
+          {result && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              className="bg-dark-900/95 border-t border-dark-600 p-3 overflow-y-auto max-h-[280px]"
+            >
+              <div className="flex justify-between items-center mb-3 pb-2 border-b border-dark-700">
+                <h3 className="font-orbitron font-bold text-gray-200 text-sm">Evaluation Report</h3>
+                <div className="flex gap-3 items-center">
+                  <div className={`px-2 py-1 rounded border text-xs font-bold ${getBgColor(result.adjustedFinalScore)} ${getColor(result.adjustedFinalScore)}`}>
+                    Adjusted: {result.adjustedFinalScore}/100
+                  </div>
+                  <div className={`px-2 py-1 rounded border text-xs ${getBgColor(result.finalScore)} ${getColor(result.finalScore)}`}>
+                    Raw: {result.finalScore}
+                  </div>
+                  <div className={`px-2 py-1 rounded border text-xs ${getBgColor(integrityScore)} ${getColor(integrityScore)}`}>
+                    <Shield size={10} className="inline mr-1" />Integrity: {integrityScore}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {[
+                  { label: "Code", val: result.codeScore, icon: Code },
+                  { label: "Logic", val: result.logicScore, icon: Activity },
+                  { label: "Comm.", val: result.communicationScore, icon: MessageSquare },
+                  { label: "Speed", val: result.speedScore, icon: Zap },
+                  { label: "Edge", val: result.edgeScore, icon: ShieldAlert },
+                  { label: "Pattern", val: result.patternScore, icon: Cpu },
+                  { label: "Confidence", val: result.confidenceScore, icon: Award },
+                  { label: "DSA", val: result.dsaScore, icon: Activity },
+                ].map(({ label, val, icon: Icon }, idx) => (
+                  <div key={idx} className={`p-2 rounded border text-center ${getBgColor(val)}`}>
+                    <Icon size={12} className={`mx-auto mb-0.5 ${getColor(val)}`} />
+                    <p className="text-[9px] text-gray-500 font-mono">{label}</p>
+                    <p className={`font-bold text-sm ${getColor(val)}`}>{val}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-dark-800 border border-dark-700 p-3 rounded text-xs text-gray-300 font-mono mb-2 leading-relaxed">
+                <strong className="text-neon-cyan block mb-1">AI VERDICT:</strong>
+                {result.feedback}
+              </div>
+
+              {result.followUpQuestion && (
+                <div className="bg-neon-purple/5 border border-neon-purple/40 p-3 rounded text-xs text-neon-purple font-mono leading-relaxed">
+                  <strong className="block mb-1">💬 Follow-Up:</strong>
+                  {result.followUpQuestion}
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
 
-        {/* Right Panel: Voice Panel & Results */}
-        <div className="flex flex-col gap-4 min-h-0 overflow-y-auto">
-           <div className="flex-1 min-h-[300px]">
-             <VoicePanel 
-                transcript={transcript} 
-                setTranscript={setTranscript} 
-                onAnalyze={handleAnalyze} 
-                isAnalyzing={isAnalyzing} 
-             />
-           </div>
-           
-           {/* Results UI */}
-           {result && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-panel p-4 border border-dark-600 flex flex-col"
-              >
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-dark-600">
-                   <h3 className="font-orbitron font-bold text-gray-200">Evaluation Report</h3>
-                   <div className={`p-2 rounded border font-bold text-lg ${getBgColor(result.finalScore)} ${getColor(result.finalScore)}`}>
-                     {result.finalScore} / 100
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                   <div className={`p-3 rounded border text-center ${getBgColor(result.codeScore)}`}>
-                     <Code size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.codeScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Code</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.codeScore)}`}>{result.codeScore}</p>
-                   </div>
-                   <div className={`p-3 rounded border text-center ${getBgColor(result.logicScore)}`}>
-                     <Activity size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.logicScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Logic</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.logicScore)}`}>{result.logicScore}</p>
-                   </div>
-                   <div className={`p-3 rounded border text-center ${getBgColor(result.communicationScore)}`}>
-                     <MessageSquare size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.communicationScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Comm.</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.communicationScore)}`}>{result.communicationScore}</p>
-                   </div>
-                   <div className={`p-3 rounded border text-center ${getBgColor(result.speedScore)}`}>
-                     <Zap size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.speedScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Speed</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.speedScore)}`}>{result.speedScore}</p>
-                   </div>
-                   <div className={`p-3 rounded border text-center ${getBgColor(result.edgeScore)}`}>
-                     <ShieldAlert size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.edgeScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Edge Case</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.edgeScore)}`}>{result.edgeScore}</p>
-                   </div>
-                   <div className={`p-3 rounded border text-center ${getBgColor(result.patternScore)}`}>
-                     <Cpu size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.patternScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Pattern</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.patternScore)}`}>{result.patternScore}</p>
-                   </div>
-                   <div className={`col-span-2 p-3 rounded border text-center ${getBgColor(result.confidenceScore)}`}>
-                     <Award size={16} className={`mx-auto mb-1 flex justify-center ${getColor(result.confidenceScore)}`} />
-                     <p className="text-[10px] text-gray-400 font-mono">Confidence</p>
-                     <p className={`font-bold tracking-widest ${getColor(result.confidenceScore)}`}>{result.confidenceScore}</p>
-                   </div>
-                </div>
-
-                <div className="bg-dark-900 border border-dark-700 p-4 rounded text-sm text-gray-300 font-mono mb-4 leading-relaxed tracking-wide">
-                  <strong className="text-neon-cyan mb-2 block">AI VERDICT:</strong>
-                  {result.feedback}
-                </div>
-
-                {result.followUpQuestion && (
-                  <div className="bg-neon-purple/5 border border-neon-purple/40 p-4 rounded text-sm text-neon-purple font-mono leading-relaxed">
-                     <strong className="mb-2 block tracking-wider font-bold">💬 AI Interviewer Follow-Up:</strong>
-                     {result.followUpQuestion}
-                  </div>
-                )}
-              </motion.div>
-           )}
+        {/* Right Panel: Voice + Proctoring stacked */}
+        <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
+          <div className="flex-shrink-0 min-h-[180px] max-h-[240px]">
+            <VoicePanel
+              transcript={transcript}
+              setTranscript={setTranscript}
+              onAnalyze={handleAnalyze}
+              isAnalyzing={isAnalyzing}
+            />
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ProctoringPanel
+              isActive={proctorActive}
+              onViolation={handleViolation}
+              onScoreUpdate={setIntegrityScore}
+            />
+          </div>
         </div>
 
       </div>

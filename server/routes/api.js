@@ -243,8 +243,6 @@ router.post("/progress/update", protect, async (req, res) => {
         text: `Solved ${data.title} (+50 XP)`,
         time: now,
       });
-      prog.placementReadiness = Math.min(100, prog.placementReadiness + 2);
-      
       if (prog.problemsSolved === 1) {
         awardBadge('first_blood', 'First Blood', 'Solved your very first problem.', 'neon-cyan');
       }
@@ -272,7 +270,33 @@ router.post("/progress/update", protect, async (req, res) => {
     else if (gamify.xp >= 100) gamify.rankTier = 'Silver';
     else gamify.rankTier = 'Bronze';
 
-    prog.recentActivity = prog.recentActivity.slice(0, 10);
+    prog.recentActivity = prog.recentActivity.slice(0, 15);
+
+    // ===== REAL Placement Readiness Calculation =====
+    // Formula: (problemAccuracy * 0.4) + (avgQuizScore * 0.2) + (avgVoiceScore * 0.2) + (consistency * 0.2)
+    const totalProblems = 8; // Total available problems
+    const problemAccuracy = Math.min(100, (prog.problemsSolved / totalProblems) * 100);
+
+    let avgQuizScore = 0;
+    if (prog.quizScores && prog.quizScores.size > 0) {
+      const quizValues = Array.from(prog.quizScores.values());
+      avgQuizScore = quizValues.reduce((a, b) => a + b, 0) / quizValues.length;
+    }
+
+    let avgVoiceScore = 0;
+    if (prog.voiceScores && prog.voiceScores.length > 0) {
+      avgVoiceScore = prog.voiceScores.reduce((a, b) => a + (b.score || 0), 0) / prog.voiceScores.length;
+    }
+
+    // Consistency = streak-based (max 100)
+    const consistency = Math.min(100, (gamify.streak.current || 0) * 15);
+
+    // If no learning activity at all, readiness = 0
+    const hasActivity = prog.problemsSolved > 0 || (prog.quizScores && prog.quizScores.size > 0) || (prog.voiceScores && prog.voiceScores.length > 0);
+    prog.placementReadiness = hasActivity
+      ? Math.round((problemAccuracy * 0.4) + (avgQuizScore * 0.2) + (avgVoiceScore * 0.2) + (consistency * 0.2))
+      : 0;
+
     user.progress = prog;
     user.gamification = gamify;
     await user.save();

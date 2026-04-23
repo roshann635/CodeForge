@@ -1,6 +1,6 @@
-// API base URL — uses relative path in production, localhost in development
-const API_BASE = import.meta.env.PROD
-  ? ""  // In production, API is served from the same origin
-  : "http://localhost:5000";
+// API base URL
+// In production on Vercel, point to the Render backend
+// In development, the Vite proxy handles /api -> localhost:5000
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 export default API_BASE;

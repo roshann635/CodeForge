@@ -15,6 +15,7 @@ import {
 import { Link } from "react-router-dom";
 import SkillHeatmap from "../components/SkillHeatmap";
 import AdaptiveLearning from "../components/AdaptiveLearning";
+import API_BASE from "../config/api";
 
 function AnimatedCounter({ end, duration = 1500, suffix = "" }) {
   const [count, setCount] = useState(0);
@@ -162,7 +163,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!token) return;
-    fetch("/api/progress", {
+    fetch(`${API_BASE}/api/progress`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())

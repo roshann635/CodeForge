@@ -11,6 +11,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import API_BASE from "../config/api";
 
 export default function Profile() {
   const { user, token, logout } = useContext(AuthContext);
@@ -27,7 +28,7 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         // Fallback to empty shell if API isn't wired yet
-        const res = await fetch("/api/progress", {
+        const res = await fetch(`${API_BASE}/api/progress`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = res.ok ? await res.json() : null;

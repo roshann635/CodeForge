@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Mic, MicOff, BrainCircuit, Volume2 } from "lucide-react";
+import API_BASE from "../config/api";
 
 const TOPICS = [
   "Binary Search",
@@ -121,7 +122,7 @@ export default function VoiceAI() {
     setTranscript(finalTranscript);
     setIsAnalyzing(true);
     try {
-      const res = await fetch("/api/ai/voice/analyze", {
+      const res = await fetch(`${API_BASE}/api/ai/voice/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: finalTranscript, topic }),
@@ -130,7 +131,7 @@ export default function VoiceAI() {
       setResults(data);
 
       // Send progress update
-      fetch("/api/progress/update", {
+      fetch(`${API_BASE}/api/progress/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

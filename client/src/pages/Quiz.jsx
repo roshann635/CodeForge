@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import API_BASE from "../config/api";
 import {
   CheckCircle,
   XCircle,
@@ -147,7 +148,7 @@ export default function Quiz() {
 
   useEffect(() => {
     if (showResult && token) {
-      fetch("/api/progress/update", {
+      fetch(`${API_BASE}/api/progress/update`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

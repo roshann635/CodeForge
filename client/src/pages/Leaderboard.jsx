@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Trophy, Medal, Hexagon, Crown } from "lucide-react";
+import API_BASE from "../config/api";
 
 export default function Leaderboard() {
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/leaderboard")
+    fetch(`${API_BASE}/api/leaderboard`)
       .then((res) => res.json())
       .then((data) => {
         setLeaders(data);

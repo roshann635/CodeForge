@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import VoicePanel from "../components/VoicePanel";
 import ProctoringPanel from "../components/ProctoringPanel";
+import API_BASE from "../config/api";
 import {
   Play,
   Send,
@@ -148,7 +149,7 @@ export default function InterviewPrep() {
     setIsAnalyzing(true);
     setIsThinking(false);
     try {
-      const resp = await fetch("/api/interview/analyze", {
+      const resp = await fetch(`${API_BASE}/api/interview/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

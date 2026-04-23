@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import Editor from "@monaco-editor/react";
 import CodeReviewPanel from "../components/CodeReviewPanel";
+import API_BASE from "../config/api";
 import {
   Play,
   CheckCircle,
@@ -233,7 +234,6 @@ const diffColors = {
   Hard: "text-neon-magenta bg-neon-magenta/10 border-neon-magenta/40",
 };
 
-const API = "";
 
 export default function Practice() {
   const [selectedId, setSelectedId] = useState(1);
@@ -276,7 +276,7 @@ export default function Practice() {
     setResults(null);
     try {
       const tc = problem.testCases[0];
-      const res = await fetch(`${API}/api/code/run`, {
+      const res = await fetch(`${API_BASE}/api/code/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -311,7 +311,7 @@ export default function Practice() {
     setIsSubmitting(true);
     setResults(null);
     try {
-      const res = await fetch(`${API}/api/code/submit`, {
+      const res = await fetch(`${API_BASE}/api/code/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -325,7 +325,7 @@ export default function Practice() {
       setResults({ mode: "submit", ...data });
 
       // Fetch AI Code Review
-      fetch(`${API}/api/ai/code-review`, {
+      fetch(`${API_BASE}/api/ai/code-review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, topic: problem.title, language }),
@@ -335,7 +335,7 @@ export default function Practice() {
         .catch(() => {});
 
       if (data.status === "accepted" && token) {
-        fetch(`${API}/api/progress/update`, {
+        fetch(`${API_BASE}/api/progress/update`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -392,12 +392,12 @@ export default function Practice() {
   const analyzeTranscript = async () => {
     try {
       const [voiceRes, speechRes] = await Promise.all([
-        fetch(`${API}/api/ai/voice/analyze`, {
+        fetch(`${API_BASE}/api/ai/voice/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ transcript, topic: problem.title }),
         }),
-        fetch(`${API}/api/ai/speech-quality`, {
+        fetch(`${API_BASE}/api/ai/speech-quality`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ transcript }),

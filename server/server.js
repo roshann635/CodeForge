@@ -54,7 +54,7 @@ app.get("/health", (req, res) => res.send("CodeForge Backend is Running"));
 app.use(express.static(path.join(__dirname, "../client/dist")));
 
 // Catch all handler: send back index.html for client-side routing
-app.get("/:path(.*)", (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 

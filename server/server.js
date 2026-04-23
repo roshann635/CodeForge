@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 
 const apiRoutes = require("./routes/api");
@@ -15,7 +16,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: true, // Allow all origins in production
+    origin: true,
     credentials: true,
   }),
 );
@@ -50,13 +51,21 @@ app.use("/api/proctor", proctorRoutes);
 
 app.get("/health", (req, res) => res.send("CodeForge Backend is Running"));
 
-// Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, "../client/dist")));
+// Serve static files from the React app build directory (production)
+const clientDistPath = path.join(__dirname, "../client/dist");
 
-// Catch all handler: send back index.html for client-side routing
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
-});
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // Catch-all: send index.html for client-side routing (must be AFTER API routes)
+  app.get("/{*path}", (req, res) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+  console.log("📦 Serving client build from:", clientDistPath);
+} else {
+  console.log("⚠️  Client build not found at:", clientDistPath);
+  console.log("   Run 'npm run build' in /client to generate production build");
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 CodeForge Server running on port ${PORT}`);

@@ -121,7 +121,7 @@ export default function VoiceAI() {
     setTranscript(finalTranscript);
     setIsAnalyzing(true);
     try {
-      const res = await fetch("http://localhost:5000/api/ai/voice/analyze", {
+      const res = await fetch("/api/ai/voice/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: finalTranscript, topic }),
@@ -130,7 +130,7 @@ export default function VoiceAI() {
       setResults(data);
 
       // Send progress update
-      fetch("http://localhost:5000/api/progress/update", {
+      fetch("/api/progress/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

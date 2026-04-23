@@ -145,15 +145,25 @@ export default function Dashboard() {
   const [userData, setUserData] = useState(null);
   const { token } = useContext(AuthContext);
 
-  const interviewHistory = JSON.parse(localStorage.getItem("interview_history") || "[]");
-  const avgThinkingTime = interviewHistory.length > 0 
-    ? Math.round(interviewHistory.reduce((acc, curr) => acc + (curr.thinkingTime || 0), 0) / interviewHistory.length / 1000)
-    : 0;
+  const interviewHistory = JSON.parse(
+    localStorage.getItem("interview_history") || "[]",
+  );
+  const avgThinkingTime =
+    interviewHistory.length > 0
+      ? Math.round(
+          interviewHistory.reduce(
+            (acc, curr) => acc + (curr.thinkingTime || 0),
+            0,
+          ) /
+            interviewHistory.length /
+            1000,
+        )
+      : 0;
 
   useEffect(() => {
     if (!token) return;
-    fetch("http://localhost:5000/api/progress", {
-      headers: { Authorization: `Bearer ${token}` }
+    fetch("/api/progress", {
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => setUserData(data))
@@ -163,19 +173,26 @@ export default function Dashboard() {
   // Compute real metrics from actual data
   const problemsSolved = userData?.progress?.problemsSolved || 0;
   const totalProblems = 8;
-  const codingScore = Math.min(100, Math.round((problemsSolved / totalProblems) * 100));
+  const codingScore = Math.min(
+    100,
+    Math.round((problemsSolved / totalProblems) * 100),
+  );
 
   const quizScores = userData?.progress?.quizScores;
   let avgQuizScore = 0;
   if (quizScores) {
-    const vals = typeof quizScores === 'object' ? Object.values(quizScores) : [];
-    if (vals.length > 0) avgQuizScore = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    const vals =
+      typeof quizScores === "object" ? Object.values(quizScores) : [];
+    if (vals.length > 0)
+      avgQuizScore = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
   }
 
   const voiceScores = userData?.progress?.voiceScores || [];
   let avgVoiceScore = 0;
   if (voiceScores.length > 0) {
-    avgVoiceScore = Math.round(voiceScores.reduce((a, b) => a + (b.score || 0), 0) / voiceScores.length);
+    avgVoiceScore = Math.round(
+      voiceScores.reduce((a, b) => a + (b.score || 0), 0) / voiceScores.length,
+    );
   }
 
   const stats = [
@@ -213,7 +230,7 @@ export default function Dashboard() {
       suffix: "s",
       icon: <Activity className="text-neon-purple" />,
       gradient: "from-neon-purple/20 to-transparent",
-    }
+    },
   ];
 
   // All radar values derived from REAL user data — no hardcoded scores
@@ -221,24 +238,29 @@ export default function Dashboard() {
     { label: "Coding", value: codingScore },
     { label: "Logic", value: avgQuizScore },
     { label: "Comm", value: avgVoiceScore },
-    { label: "Speed", value: avgThinkingTime > 0 ? Math.max(0, 100 - avgThinkingTime) : 0 },
+    {
+      label: "Speed",
+      value: avgThinkingTime > 0 ? Math.max(0, 100 - avgThinkingTime) : 0,
+    },
     { label: "DSA", value: Math.round((codingScore + avgQuizScore) / 2) },
-    { label: "Ready", value: userData?.progress?.placementReadiness || 0 }
+    { label: "Ready", value: userData?.progress?.placementReadiness || 0 },
   ];
 
-  const activities = userData?.progress?.recentActivity?.map((act) => ({
-    text: act.text,
-    time: act.time ? new Date(act.time).toLocaleString() : "Recently",
-    type:
-      act.type === "problem"
-        ? "success"
-        : act.type === "quiz"
-          ? "info"
-          : act.type === "system"
-            ? "warning"
-            : "info",
-    icon: act.type === "problem" ? Code : act.type === "quiz" ? BookOpen : Mic,
-  })) || [];
+  const activities =
+    userData?.progress?.recentActivity?.map((act) => ({
+      text: act.text,
+      time: act.time ? new Date(act.time).toLocaleString() : "Recently",
+      type:
+        act.type === "problem"
+          ? "success"
+          : act.type === "quiz"
+            ? "info"
+            : act.type === "system"
+              ? "warning"
+              : "info",
+      icon:
+        act.type === "problem" ? Code : act.type === "quiz" ? BookOpen : Mic,
+    })) || [];
 
   return (
     <div className="space-y-6 text-white">
@@ -308,7 +330,8 @@ export default function Dashboard() {
             })}
             {activities.length === 0 && (
               <li className="p-4 text-center text-sm font-mono text-gray-500 border border-dashed border-dark-600 rounded-lg">
-                No active signals detected. Begin executing code in the Practice HQ to log history.
+                No active signals detected. Begin executing code in the Practice
+                HQ to log history.
               </li>
             )}
           </ul>
@@ -320,29 +343,34 @@ export default function Dashboard() {
             Skill Radar
           </h3>
           <RadarChart data={radarData} />
-          
+
           <div className="w-full mt-6 bg-dark-900/50 border border-dark-700 p-4 rounded-xl">
-             <h4 className="text-sm font-orbitron text-neon-yellow mb-2 tracking-wide font-bold">⚠️ PERFORMANCE INSIGHTS</h4>
-             <ul className="text-xs text-gray-400 font-mono space-y-2">
-               {(userData?.progress?.weakAreas || []).length > 0 ? (
-                 userData.progress.weakAreas.map((area, i) => (
-                   <li key={i} className="flex items-start gap-2">
-                     <span className="text-red-500 mt-0.5">▪</span>
-                     Needs improvement: <span className="text-neon-yellow">{area}</span> — scored below 60% in quiz.
-                   </li>
-                 ))
-               ) : codingScore === 0 && avgQuizScore === 0 ? (
-                 <li className="flex items-start gap-2">
-                   <span className="text-gray-500 mt-0.5">▪</span>
-                   No data yet. Start solving problems and taking quizzes to see insights.
-                 </li>
-               ) : (
-                 <li className="flex items-start gap-2">
-                   <span className="text-neon-green mt-0.5">✓</span>
-                   No weak areas detected. Keep up the good work!
-                 </li>
-               )}
-             </ul>
+            <h4 className="text-sm font-orbitron text-neon-yellow mb-2 tracking-wide font-bold">
+              ⚠️ PERFORMANCE INSIGHTS
+            </h4>
+            <ul className="text-xs text-gray-400 font-mono space-y-2">
+              {(userData?.progress?.weakAreas || []).length > 0 ? (
+                userData.progress.weakAreas.map((area, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">▪</span>
+                    Needs improvement:{" "}
+                    <span className="text-neon-yellow">{area}</span> — scored
+                    below 60% in quiz.
+                  </li>
+                ))
+              ) : codingScore === 0 && avgQuizScore === 0 ? (
+                <li className="flex items-start gap-2">
+                  <span className="text-gray-500 mt-0.5">▪</span>
+                  No data yet. Start solving problems and taking quizzes to see
+                  insights.
+                </li>
+              ) : (
+                <li className="flex items-start gap-2">
+                  <span className="text-neon-green mt-0.5">✓</span>
+                  No weak areas detected. Keep up the good work!
+                </li>
+              )}
+            </ul>
           </div>
         </div>
       </div>
@@ -350,12 +378,16 @@ export default function Dashboard() {
       {/* Skill Heatmap + Adaptive Learning */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SkillHeatmap
-          quizScores={quizScores ? (typeof quizScores === 'object' ? quizScores : {}) : {}}
+          quizScores={
+            quizScores ? (typeof quizScores === "object" ? quizScores : {}) : {}
+          }
           problemData={{}}
           voiceScores={voiceScores}
         />
         <AdaptiveLearning
-          quizScores={quizScores ? (typeof quizScores === 'object' ? quizScores : {}) : {}}
+          quizScores={
+            quizScores ? (typeof quizScores === "object" ? quizScores : {}) : {}
+          }
           problemsSolved={problemsSolved}
           voiceScores={voiceScores}
           weakAreas={userData?.progress?.weakAreas || []}
@@ -364,7 +396,9 @@ export default function Dashboard() {
 
       {/* Consistency Tracking */}
       {(() => {
-        const history = JSON.parse(localStorage.getItem("interview_history") || "[]");
+        const history = JSON.parse(
+          localStorage.getItem("interview_history") || "[]",
+        );
         if (history.length < 2) return null;
         const recent = history.slice(-5);
         const first = recent[0]?.finalScore || 0;
@@ -373,7 +407,8 @@ export default function Dashboard() {
         return (
           <div className="glass-panel p-5 border border-dark-600">
             <h3 className="font-orbitron font-bold text-white text-sm mb-3 flex items-center gap-2">
-              <TrendingUp size={16} className="text-neon-green" /> CONSISTENCY TRACKING
+              <TrendingUp size={16} className="text-neon-green" /> CONSISTENCY
+              TRACKING
             </h3>
             <div className="flex items-center gap-6">
               <div className="flex-1">
@@ -381,26 +416,40 @@ export default function Dashboard() {
                   {recent.map((h, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center">
                       <div
-                        className={`w-full rounded-t ${h.finalScore >= 70 ? 'bg-neon-green/60' : h.finalScore >= 40 ? 'bg-neon-yellow/60' : 'bg-red-500/60'}`}
-                        style={{ height: `${Math.max(8, h.finalScore * 0.6)}px` }}
+                        className={`w-full rounded-t ${h.finalScore >= 70 ? "bg-neon-green/60" : h.finalScore >= 40 ? "bg-neon-yellow/60" : "bg-red-500/60"}`}
+                        style={{
+                          height: `${Math.max(8, h.finalScore * 0.6)}px`,
+                        }}
                       />
-                      <span className="text-[9px] text-gray-500 mt-1">{h.finalScore}</span>
+                      <span className="text-[9px] text-gray-500 mt-1">
+                        {h.finalScore}
+                      </span>
                     </div>
                   ))}
                 </div>
                 <p className="text-xs text-gray-400">
                   {improvement > 0 ? (
-                    <span className="text-neon-green">↑ Improved {improvement} points over last {recent.length} sessions</span>
+                    <span className="text-neon-green">
+                      ↑ Improved {improvement} points over last {recent.length}{" "}
+                      sessions
+                    </span>
                   ) : improvement < 0 ? (
-                    <span className="text-red-400">↓ Declined {Math.abs(improvement)} points — review your weak areas</span>
+                    <span className="text-red-400">
+                      ↓ Declined {Math.abs(improvement)} points — review your
+                      weak areas
+                    </span>
                   ) : (
-                    <span className="text-gray-500">Consistent performance across sessions</span>
+                    <span className="text-gray-500">
+                      Consistent performance across sessions
+                    </span>
                   )}
                 </p>
               </div>
               <div className="text-center px-4 py-2 border border-dark-600 rounded-lg">
                 <p className="text-[10px] text-gray-500 uppercase">Sessions</p>
-                <p className="text-xl font-bold font-orbitron text-neon-cyan">{history.length}</p>
+                <p className="text-xl font-bold font-orbitron text-neon-cyan">
+                  {history.length}
+                </p>
               </div>
             </div>
           </div>
@@ -410,10 +459,25 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Visualizer", to: "/visualize", icon: BarChart3, color: "neon-cyan" },
-          { label: "Practice", to: "/practice", icon: Code, color: "neon-purple" },
+          {
+            label: "Visualizer",
+            to: "/visualize",
+            icon: BarChart3,
+            color: "neon-cyan",
+          },
+          {
+            label: "Practice",
+            to: "/practice",
+            icon: Code,
+            color: "neon-purple",
+          },
           { label: "Learn", to: "/learn", icon: BookOpen, color: "neon-green" },
-          { label: "Mock Interview", to: "/interview", icon: Mic, color: "neon-magenta" },
+          {
+            label: "Mock Interview",
+            to: "/interview",
+            icon: Mic,
+            color: "neon-magenta",
+          },
         ].map((action, i) => {
           const Icon = action.icon;
           const colorClasses = {

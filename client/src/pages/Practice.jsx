@@ -16,217 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 
-const PROBLEMS = [
-  {
-    id: 1,
-    title: "Two Sum",
-    difficulty: "Easy",
-    tags: ["Array", "Hash Map"],
-    description:
-      "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.",
-    examples: [
-      {
-        input: "nums = [2,7,11,15], target = 9",
-        output: "[0,1]",
-        explanation: "Because nums[0] + nums[1] == 9",
-      },
-      { input: "nums = [3,2,4], target = 6", output: "[1,2]", explanation: "" },
-    ],
-    starterCode: {
-      javascript:
-        "function twoSum(nums, target) {\n  // Write your solution here\n  \n}",
-      python:
-        "def two_sum(nums, target):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your solution here\n        return new int[]{};\n    }\n}",
-      cpp: "#include <vector>\nusing namespace std;\n\nvector<int> twoSum(vector<int>& nums, int target) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: "[2,7,11,15], 9", expected: "[0,1]" },
-      { input: "[3,2,4], 6", expected: "[1,2]" },
-      { input: "[3,3], 6", expected: "[0,1]" },
-    ],
-  },
-  {
-    id: 2,
-    title: "Binary Search",
-    difficulty: "Easy",
-    tags: ["Array", "Binary Search"],
-    description:
-      "Given a sorted array of integers `nums` and a target value, return the index if found. If not, return -1.\n\nYou must write an algorithm with O(log n) runtime complexity.",
-    examples: [
-      {
-        input: "nums = [-1,0,3,5,9,12], target = 9",
-        output: "4",
-        explanation: "9 exists at index 4",
-      },
-      {
-        input: "nums = [-1,0,3,5,9,12], target = 2",
-        output: "-1",
-        explanation: "2 does not exist",
-      },
-    ],
-    starterCode: {
-      javascript:
-        "function search(nums, target) {\n  // Write your solution here\n  \n}",
-      python:
-        "def search(nums, target):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public int search(int[] nums, int target) {\n        // Write your solution here\n        return -1;\n    }\n}",
-      cpp: "#include <vector>\nusing namespace std;\n\nint search(vector<int>& nums, int target) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: "[-1,0,3,5,9,12], 9", expected: "4" },
-      { input: "[-1,0,3,5,9,12], 2", expected: "-1" },
-    ],
-  },
-  {
-    id: 3,
-    title: "Valid Parentheses",
-    difficulty: "Easy",
-    tags: ["Stack", "String"],
-    description:
-      "Given a string `s` containing just the characters `(`, `)`, `{`, `}`, `[` and `]`, determine if the input string is valid.",
-    examples: [
-      { input: 's = "()"', output: "true", explanation: "" },
-      { input: 's = "(]"', output: "false", explanation: "" },
-    ],
-    starterCode: {
-      javascript: "function isValid(s) {\n  // Write your solution here\n  \n}",
-      python: "def is_valid(s):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public boolean isValid(String s) {\n        // Write your solution here\n        return false;\n    }\n}",
-      cpp: "#include <string>\nusing namespace std;\n\nbool isValid(string s) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: '"()"', expected: "true" },
-      { input: '"()[]{}\"', expected: "true" },
-      { input: '"(]"', expected: "false" },
-    ],
-  },
-  {
-    id: 4,
-    title: "Reverse Linked List",
-    difficulty: "Medium",
-    tags: ["Linked List"],
-    description:
-      "Given the head of a singly linked list, reverse the list, and return the reversed list.",
-    examples: [
-      { input: "head = [1,2,3,4,5]", output: "[5,4,3,2,1]", explanation: "" },
-    ],
-    starterCode: {
-      javascript:
-        "function reverseList(head) {\n  // Write your solution here\n  \n}",
-      python:
-        "def reverse_list(head):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public ListNode reverseList(ListNode head) {\n        // Write your solution here\n        return null;\n    }\n}",
-      cpp: "struct ListNode {\n    int val;\n    ListNode *next;\n};\n\nListNode* reverseList(ListNode* head) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: "[1,2,3,4,5]", expected: "[5,4,3,2,1]" },
-      { input: "[1,2]", expected: "[2,1]" },
-    ],
-  },
-  {
-    id: 5,
-    title: "Maximum Subarray",
-    difficulty: "Medium",
-    tags: ["Array", "DP"],
-    description:
-      "Given an integer array `nums`, find the subarray with the largest sum, and return its sum.",
-    examples: [
-      {
-        input: "nums = [-2,1,-3,4,-1,2,1,-5,4]",
-        output: "6",
-        explanation: "The subarray [4,-1,2,1] has the largest sum = 6",
-      },
-    ],
-    starterCode: {
-      javascript:
-        "function maxSubArray(nums) {\n  // Write your solution here\n  \n}",
-      python:
-        "def max_sub_array(nums):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public int maxSubArray(int[] nums) {\n        // Write your solution here\n        return 0;\n    }\n}",
-      cpp: "#include <vector>\nusing namespace std;\n\nint maxSubArray(vector<int>& nums) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: "[-2,1,-3,4,-1,2,1,-5,4]", expected: "6" },
-      { input: "[1]", expected: "1" },
-      { input: "[5,4,-1,7,8]", expected: "23" },
-    ],
-  },
-  {
-    id: 6,
-    title: "Merge Two Sorted Lists",
-    difficulty: "Easy",
-    tags: ["Linked List", "Recursion"],
-    description:
-      "Merge two sorted linked lists and return it as a sorted list.",
-    examples: [
-      {
-        input: "l1 = [1,2,4], l2 = [1,3,4]",
-        output: "[1,1,2,3,4,4]",
-        explanation: "",
-      },
-    ],
-    starterCode: {
-      javascript:
-        "function mergeTwoLists(l1, l2) {\n  // Write your solution here\n  \n}",
-      python:
-        "def merge_two_lists(l1, l2):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {\n        return null;\n    }\n}",
-      cpp: "struct ListNode {\n    int val;\n    ListNode *next;\n};\n\nListNode* mergeTwoLists(ListNode* l1, ListNode* l2) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [{ input: "[1,2,4], [1,3,4]", expected: "[1,1,2,3,4,4]" }],
-  },
-  {
-    id: 7,
-    title: "Climbing Stairs",
-    difficulty: "Easy",
-    tags: ["DP", "Math"],
-    description:
-      "You are climbing a staircase. It takes `n` steps to reach the top. Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?",
-    examples: [
-      { input: "n = 2", output: "2", explanation: "1+1 or 2" },
-      { input: "n = 3", output: "3", explanation: "1+1+1, 1+2, 2+1" },
-    ],
-    starterCode: {
-      javascript:
-        "function climbStairs(n) {\n  // Write your solution here\n  \n}",
-      python: "def climb_stairs(n):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public int climbStairs(int n) {\n        return 0;\n    }\n}",
-      cpp: "int climbStairs(int n) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: "2", expected: "2" },
-      { input: "3", expected: "3" },
-      { input: "5", expected: "8" },
-    ],
-  },
-  {
-    id: 8,
-    title: "Number of Islands",
-    difficulty: "Hard",
-    tags: ["Graph", "BFS", "DFS"],
-    description:
-      "Given an m x n 2D binary grid which represents a map of '1's (land) and '0's (water), return the number of islands.",
-    examples: [
-      {
-        input: 'grid = [["1","1","0"],["1","1","0"],["0","0","1"]]',
-        output: "2",
-        explanation: "",
-      },
-    ],
-    starterCode: {
-      javascript:
-        "function numIslands(grid) {\n  // Write your solution here\n  \n}",
-      python:
-        "def num_islands(grid):\n    # Write your solution here\n    pass",
-      java: "class Solution {\n    public int numIslands(char[][] grid) {\n        return 0;\n    }\n}",
-      cpp: "#include <vector>\nusing namespace std;\n\nint numIslands(vector<vector<char>>& grid) {\n    // Write your solution here\n    \n}",
-    },
-    testCases: [
-      { input: '[["1","1","0"],["1","1","0"],["0","0","1"]]', expected: "2" },
-    ],
-  },
-];
+import { PROBLEMS } from "../data/problems.js";
 
 const diffColors = {
   Easy: "text-neon-green bg-neon-green/10 border-neon-green/40",
@@ -283,6 +73,7 @@ export default function Practice() {
           code,
           language,
           problemId: problem.id,
+          funcName: problem.funcName,
           testCase: tc,
         }),
       });
@@ -318,6 +109,7 @@ export default function Practice() {
           code,
           language,
           problemId: problem.id,
+          funcName: problem.funcName,
           testCases: problem.testCases,
         }),
       });

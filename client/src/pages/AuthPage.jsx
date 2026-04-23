@@ -10,7 +10,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login, register } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -40,7 +40,7 @@ export default function AuthPage() {
       <div className="absolute bottom-[-100px] left-[-100px] w-96 h-96 bg-neon-purple/20 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="glass-panel w-full max-w-md p-8 relative z-10 border border-dark-700/50 shadow-[0_0_40px_rgba(0,243,255,0.1)]">
-        
+
         <div className="flex flex-col items-center mb-8">
           <div className="bg-dark-800 p-4 rounded-2xl border border-dark-600 mb-4 shadow-[0_0_15px_#00f3ff44]">
             <Terminal className="text-neon-cyan w-10 h-10" />
@@ -65,13 +65,13 @@ export default function AuthPage() {
               <label className="block text-xs font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Full Name (Signature)</label>
               <div className="relative">
                 <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required={!isLogin}
                   className="w-full bg-dark-900 border border-dark-600 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-neon-cyan/80 focus:ring-1 focus:ring-neon-cyan/50 transition-all font-mono text-sm"
-                  placeholder="Roshan N"
+                  placeholder="Roshan"
                 />
               </div>
             </div>
@@ -80,8 +80,8 @@ export default function AuthPage() {
             <label className="block text-xs font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Secure Email Link</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-              <input 
-                type="email" 
+              <input
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -95,8 +95,8 @@ export default function AuthPage() {
             <label className="block text-xs font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Encryption Key (Password)</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -107,8 +107,8 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(0,243,255,0.4)] disabled:opacity-50"
           >
@@ -126,7 +126,7 @@ export default function AuthPage() {
         <div className="mt-8 pt-6 border-t border-dark-700/50 text-center">
           <p className="text-gray-400 text-sm">
             {isLogin ? "Don't have an access key? " : "Already established link? "}
-            <button 
+            <button
               onClick={() => setIsLogin(!isLogin)}
               className="text-neon-cyan hover:text-white font-bold transition-colors underline decoration-neon-cyan/30 underline-offset-4"
             >

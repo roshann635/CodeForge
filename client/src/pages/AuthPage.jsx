@@ -5,7 +5,7 @@ import { Terminal, Mail, Lock, LogIn, UserPlus, KeyRound, ShieldAlert } from 'lu
 import API_BASE from '../config/api';
 
 export default function AuthPage() {
-  const [mode, setMode] = useState('login'); // login | register | forgot | otp | reset
+  const [mode, setMode] = useState('login'); // login | register | register-otp | forgot | otp | reset
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,7 +14,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  const { login, register } = useContext(AuthContext);
+  const { login, register, verifyRegistration } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleAuthSubmit = async (e) => {
@@ -25,12 +25,29 @@ export default function AuthPage() {
     try {
       if (mode === 'login') {
         await login(email, password);
+        navigate('/profile');
       } else {
-        await register(name, email, password);
+        const res = await register(name, email, password);
+        setSuccessMsg(res.message || 'OTP sent to your secure link.');
+        setMode('register-otp');
       }
-      navigate('/profile');
     } catch (err) {
       setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterOtpSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
+    try {
+      await verifyRegistration(email, otp);
+      navigate('/profile');
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -179,6 +196,23 @@ export default function AuthPage() {
       );
     }
 
+    if (mode === 'register-otp') {
+      return (
+        <form onSubmit={handleRegisterOtpSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Registration Code</label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+              <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} required maxLength={6} className="w-full bg-dark-900 border border-dark-600 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-neon-cyan/80 focus:ring-1 focus:ring-neon-cyan/50 transition-all font-mono text-center tracking-[0.5em] text-lg" placeholder="000000" />
+            </div>
+          </div>
+          <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 bg-neon-cyan/20 text-neon-cyan border border-neon-cyan hover:bg-neon-cyan hover:text-dark-900 font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(0,243,255,0.2)] disabled:opacity-50">
+            {loading ? "Verifying..." : "Complete Registration"}
+          </button>
+        </form>
+      );
+    }
+
     if (mode === 'reset') {
       return (
         <form onSubmit={handleResetSubmit} className="space-y-5">
@@ -200,6 +234,7 @@ export default function AuthPage() {
   const titles = {
     login: "System Link Established",
     register: "Initialize New Hacker Protocol",
+    'register-otp': "Verify Protocol Registration",
     forgot: "Protocol Reset Sequence",
     otp: "Verify Identity",
     reset: "Deploy New Keys"
@@ -208,6 +243,7 @@ export default function AuthPage() {
   const subtitles = {
     login: "Enter credentials to access the grid.",
     register: "Register signature to join the collective.",
+    'register-otp': "Enter 6-digit signal sent to verify email.",
     forgot: "Transmit code to secure email link.",
     otp: "Enter 6-digit signal from your email.",
     reset: "Establish a new encryption password."

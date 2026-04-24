@@ -54,6 +54,18 @@ export const AuthProvider = ({ children }) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
 
+    return data;
+  };
+
+  const verifyRegistration = async (email, otp) => {
+    const res = await fetch(`${API_BASE}/api/auth/verify-registration`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+
     setToken(data.token);
     setUser({ id: data._id, email: data.email, name: data.name });
     localStorage.setItem("codeforge_token", data.token);
@@ -72,7 +84,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, login, register, logout }}
+      value={{ user, token, loading, login, register, verifyRegistration, logout }}
     >
       {children}
     </AuthContext.Provider>

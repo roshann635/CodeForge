@@ -13,44 +13,98 @@ const generateToken = (id) => {
     return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
 };
 
-// @desc    Register a new user
+// @desc    Register a new user (Request OTP)
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        const userExists = await User.findOne({ email });
-        if (userExists) {
+        let user = await User.findOne({ email });
+        if (user && user.isVerified !== false) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        const user = await User.create({
-            name,
-            email,
-            password,
-            progress: {
-                problemsSolved: 0,
-                accuracy: 100,
-                placementReadiness: 10,
-                weakAreas: [],
-                recentActivity: [{
-                    type: 'system',
-                    text: 'Account created',
-                    time: new Date()
-                }]
-            }
-        });
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        if (user) {
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                token: generateToken(user._id),
+        if (user && user.isVerified === false) {
+            user.name = name;
+            user.password = password;
+            user.registrationOtp = otp;
+            user.registrationOtpExpires = Date.now() + 10 * 60 * 1000;
+            await user.save();
+        } else {
+            user = await User.create({
+                name,
+                email,
+                password,
+                isVerified: false,
+                registrationOtp: otp,
+                registrationOtpExpires: Date.now() + 10 * 60 * 1000,
+                progress: {
+                    problemsSolved: 0,
+                    accuracy: 100,
+                    placementReadiness: 10,
+                    weakAreas: [],
+                    recentActivity: [{
+                        type: 'system',
+                        text: 'Account created',
+                        time: new Date()
+                    }]
+                }
+            });
+        }
+
+        if (process.env.RESEND_API_KEY) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+                to: user.email,
+                subject: 'CodeForge - Verify Your Identity',
+                html: `
+                    <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
+                        <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Registration</h2>
+                        <p>Operator, verify your identity to join the grid.</p>
+                        <p>Your access code is:</p>
+                        <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
+                        <p>This code will self-destruct in 10 minutes.</p>
+                    </div>
+                `,
             });
         } else {
-            res.status(400).json({ message: 'Invalid user data' });
+            console.log("Mock Email Sent. Registration OTP:", otp);
         }
+
+        res.status(200).json({ message: 'OTP sent to email for verification' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @desc    Verify Registration OTP
+// @route   POST /api/auth/verify-registration
+router.post('/verify-registration', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user || user.isVerified !== false) {
+            return res.status(400).json({ message: 'Invalid request or user already verified' });
+        }
+
+        if (user.registrationOtp !== otp || user.registrationOtpExpires < Date.now()) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        user.isVerified = true;
+        user.registrationOtp = undefined;
+        user.registrationOtpExpires = undefined;
+        await user.save();
+
+        res.status(201).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            token: generateToken(user._id),
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -65,6 +119,9 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ email });
 
         if (user && (await user.matchPassword(password))) {
+            if (user.isVerified === false) {
+                return res.status(403).json({ message: 'Account not verified. Please register again to receive a new OTP.' });
+            }
             res.json({
                 _id: user._id,
                 name: user.name,

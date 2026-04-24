@@ -55,9 +55,9 @@ router.post('/register', async (req, res) => {
         }
 
         if (process.env.RESEND_API_KEY) {
-            await resend.emails.send({
+            const { data, error } = await resend.emails.send({
                 from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-                to: user.email,
+                to: email, // Use email from req.body directly
                 subject: 'CodeForge - Verify Your Identity',
                 html: `
                     <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
@@ -69,6 +69,10 @@ router.post('/register', async (req, res) => {
                     </div>
                 `,
             });
+            if (error) {
+                console.error("Resend Registration Email Error:", error);
+                return res.status(500).json({ message: error.message || "Failed to send OTP email." });
+            }
         } else {
             console.log("Mock Email Sent. Registration OTP:", otp);
         }
@@ -155,7 +159,7 @@ router.post('/forgot-password', async (req, res) => {
         await user.save();
 
         if (process.env.RESEND_API_KEY) {
-            await resend.emails.send({
+            const { data, error } = await resend.emails.send({
                 from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
                 to: user.email,
                 subject: 'CodeForge - Password Reset OTP',
@@ -170,6 +174,10 @@ router.post('/forgot-password', async (req, res) => {
                     </div>
                 `,
             });
+            if (error) {
+                console.error("Resend Forgot Password Error:", error);
+                return res.status(500).json({ message: error.message || "Failed to send OTP email." });
+            }
         } else {
             console.log("Mock Email Sent. OTP:", otp); // For local testing without API key
         }

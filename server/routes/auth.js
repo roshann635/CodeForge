@@ -1,10 +1,17 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 const router = express.Router();
-const resend = new Resend(process.env.RESEND_API_KEY || '');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 const JWT_SECRET = process.env.JWT_SECRET || 'codeforge_hackathon_super_secret_key_123!';
 
@@ -54,9 +61,9 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        if (process.env.RESEND_API_KEY) {
-            const { data, error } = await resend.emails.send({
-                from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            await transporter.sendMail({
+                from: `"CodeForge" <${process.env.EMAIL_USER}>`,
                 to: email, // Use email from req.body directly
                 subject: 'CodeForge - Verify Your Identity',
                 html: `
@@ -69,10 +76,6 @@ router.post('/register', async (req, res) => {
                     </div>
                 `,
             });
-            if (error) {
-                console.error("Resend Registration Email Error:", error);
-                return res.status(500).json({ message: error.message || "Failed to send OTP email." });
-            }
         } else {
             console.log("Mock Email Sent. Registration OTP:", otp);
         }
@@ -158,9 +161,9 @@ router.post('/forgot-password', async (req, res) => {
         user.resetOtpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
         await user.save();
 
-        if (process.env.RESEND_API_KEY) {
-            const { data, error } = await resend.emails.send({
-                from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            await transporter.sendMail({
+                from: `"CodeForge" <${process.env.EMAIL_USER}>`,
                 to: user.email,
                 subject: 'CodeForge - Password Reset OTP',
                 html: `
@@ -174,12 +177,8 @@ router.post('/forgot-password', async (req, res) => {
                     </div>
                 `,
             });
-            if (error) {
-                console.error("Resend Forgot Password Error:", error);
-                return res.status(500).json({ message: error.message || "Failed to send OTP email." });
-            }
         } else {
-            console.log("Mock Email Sent. OTP:", otp); // For local testing without API key
+            console.log("Mock Email Sent. OTP:", otp); // For local testing without credentials
         }
 
         res.json({ message: 'OTP sent to email' });

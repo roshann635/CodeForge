@@ -58,12 +58,13 @@ if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
 
   // Catch-all: send index.html for client-side routing (must be AFTER API routes)
-  app.get("/{*path}", (req, res) => {
+  app.get("*", (req, res) => {
     res.sendFile(path.join(clientDistPath, "index.html"));
   });
   console.log("📦 Serving client build from:", clientDistPath);
 } else {
   console.log("⚠️  Client build not found at:", clientDistPath);
+  console.log("   Current Directory:", process.cwd());
   console.log("   Run 'npm run build' in /client to generate production build");
 }
 

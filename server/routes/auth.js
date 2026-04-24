@@ -64,6 +64,7 @@ router.post('/register', async (req, res) => {
         }
 
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            console.log(`Attempting to send verification email to: ${email}`);
             await transporter.sendMail({
                 from: `"CodeForge" <${process.env.EMAIL_USER}>`,
                 to: email, // Use email from req.body directly
@@ -78,12 +79,14 @@ router.post('/register', async (req, res) => {
                     </div>
                 `,
             });
+            console.log("Email sent successfully!");
         } else {
-            console.log("Mock Email Sent. Registration OTP:", otp);
+            console.log("Nodemailer credentials missing. Mock Email Sent. Registration OTP:", otp);
         }
 
         res.status(200).json({ message: 'OTP sent to email for verification' });
     } catch (error) {
+        console.error("Registration Error:", error);
         res.status(500).json({ message: error.message });
     }
 });

@@ -5,6 +5,21 @@ const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
+// In-memory store for pending registrations (unverified users)
+// Discards data on server restart to keep the database clean from 'fake identities'
+const pendingUsers = new Map();
+
+// Helper to clean up expired pending users periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [email, user] of pendingUsers.entries()) {
+        if (user.expires < now) {
+            pendingUsers.delete(email);
+        }
+    }
+}, 5 * 60 * 1000); // Every 5 minutes
+
+
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -28,40 +43,24 @@ router.post('/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
+        // 1. Check if user already exists and is verified in DB
         let user = await User.findOne({ email });
         if (user && user.isVerified !== false) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
+        // 2. Generate OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        if (user && user.isVerified === false) {
-            user.name = name;
-            user.password = password;
-            user.registrationOtp = otp;
-            user.registrationOtpExpires = Date.now() + 10 * 60 * 1000;
-            await user.save();
-        } else {
-            user = await User.create({
-                name,
-                email,
-                password,
-                isVerified: false,
-                registrationOtp: otp,
-                registrationOtpExpires: Date.now() + 10 * 60 * 1000,
-                progress: {
-                    problemsSolved: 0,
-                    accuracy: 100,
-                    placementReadiness: 10,
-                    weakAreas: [],
-                    recentActivity: [{
-                        type: 'system',
-                        text: 'Account created',
-                        time: new Date()
-                    }]
-                }
-            });
-        }
+        // 3. Store in memory (not database) until verified
+        pendingUsers.set(email, {
+            name,
+            email,
+            password,
+            otp,
+            expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+        });
+
 
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             console.log(`Attempting to send verification email to: ${email}`);
@@ -96,20 +95,40 @@ router.post('/register', async (req, res) => {
 router.post('/verify-registration', async (req, res) => {
     try {
         const { email, otp } = req.body;
-        const user = await User.findOne({ email });
+        
+        // 1. Check in-memory store
+        const pendingUser = pendingUsers.get(email);
 
-        if (!user || user.isVerified !== false) {
-            return res.status(400).json({ message: 'Invalid request or user already verified' });
+        if (!pendingUser) {
+            return res.status(400).json({ message: 'Registration session expired or not found. Please register again.' });
         }
 
-        if (user.registrationOtp !== otp || user.registrationOtpExpires < Date.now()) {
+        if (pendingUser.otp !== otp || pendingUser.expires < Date.now()) {
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
-        user.isVerified = true;
-        user.registrationOtp = undefined;
-        user.registrationOtpExpires = undefined;
-        await user.save();
+        // 2. Create the user in database ONLY AFTER verification
+        const user = await User.create({
+            name: pendingUser.name,
+            email: pendingUser.email,
+            password: pendingUser.password, // Will be hashed by pre-save hook in model
+            isVerified: true,
+            progress: {
+                problemsSolved: 0,
+                accuracy: 100,
+                placementReadiness: 10,
+                weakAreas: [],
+                recentActivity: [{
+                    type: 'system',
+                    text: 'Identity Verified. Operator active.',
+                    time: new Date()
+                }]
+            }
+        });
+
+        // 3. Clear from memory
+        pendingUsers.delete(email);
+
 
         res.status(201).json({
             _id: user._id,

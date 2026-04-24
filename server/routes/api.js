@@ -314,7 +314,7 @@ router.post("/progress/update", protect, async (req, res) => {
 
 router.get("/leaderboard", async (req, res) => {
   try {
-    const topUsers = await User.find({})
+    const topUsers = await User.find({ isVerified: true })
       .sort({ "gamification.xp": -1, "progress.problemsSolved": -1 })
       .limit(100)
       .select("name email gamification progress.problemsSolved")

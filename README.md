@@ -1,151 +1,47 @@
-# 🌐 Roshan Jadhav — Personal Portfolio
+# 💻 CodeForge
 
-A modern, responsive personal portfolio website showcasing my journey as a **Computer Science Engineering student**, my technical skills, projects, achievements, certifications, and experience.
+### Collaborative Coding & Developer Platform
 
-🔗 **Live Website:** https://roshan-635.vercel.app/
+**CodeForge** is a modern web application built to provide developers with a dedicated platform for coding, learning, and collaborating. The project focuses on creating a practical developer-oriented experience with a clean interface and useful tools for programmers.
 
 ---
 
-## ✨ About the Portfolio
+## 🚀 Features
 
-This portfolio serves as a central platform to showcase my work, technical journey, and experience in software development and emerging technologies.
-
-It includes:
-
-* 👨‍💻 About Me
-* 🛠️ Technical Skills
-* 🚀 Projects
-* 🏆 Achievements
-* 📜 Certifications
-* 🎓 Education
-* 📄 Resume
-* 📬 Contact
-
-The website is designed with a clean, modern interface and responsive layout for a smooth experience across different devices.
+* 💻 Developer-focused coding environment
+* 🧑‍💻 User-friendly interface for programmers
+* 📚 Coding and learning-oriented experience
+* 🔐 User authentication and account management
+* 📊 Organized user/project experience
+* 📱 Responsive design
+* ⚡ Fast and interactive frontend
+* 🔗 Integrated backend APIs
+* 🗄️ Persistent data management
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **Frontend:** React.js
-* **Language:** JavaScript
-* **Styling:** CSS / Tailwind CSS
-* **Build Tool:** Vite
-* **Deployment:** Vercel
-* **Version Control:** Git & GitHub
-
----
-
-## 🚀 Featured Projects
-
-The portfolio showcases several of my development projects, covering areas such as full-stack development, real-time applications, education technology, productivity, and AI-powered solutions.
-
-### 🔥 CodeForge
-
-A developer-focused project designed to provide a platform for coding and software development-related activities.
-
-**Focus:** Software Development • Coding • Developer Tools
-
----
-
-### 🤝 SkillSwap
-
-A platform focused on connecting people to **share, exchange, and learn skills** from each other.
-
-**Focus:** Skill Sharing • Community • Web Development
-
----
-
-### 💬 Samvaad
-
-A **real-time communication application** designed for seamless user-to-user messaging.
-
-**Focus:** Real-Time Communication • WebSockets • Full-Stack Development
-
----
-
-### 📚 Prep10X
-
-A preparation-focused platform designed to help users improve their learning and preparation through a structured digital experience.
-
-**Focus:** Learning • Exam Preparation • Productivity
-
----
-
-### 🛡️ SheCity AI
-
-An AI-powered women's safety platform designed to provide safety-focused tools and intelligent assistance.
-
-**Focus:** AI • Safety Technology • Full-Stack Development
-
----
-
-### 🧠 Algonova
-
-An interactive platform focused on making **Data Structures and Algorithms** easier to learn through visualization and interactive learning experiences.
-
-**Focus:** DSA • Education Technology • Interactive Learning
-
----
-
-### 🌱 PlantScan
-
-An AI-oriented application focused on analyzing plants and providing useful insights through intelligent image-based analysis.
-
-**Focus:** AI/ML • Computer Vision • Agriculture Technology
-
----
-
-### ⚡ Energy Wise Companion
-
-A technology-driven solution focused on improving awareness and decision-making around energy consumption.
-
-**Focus:** Sustainability • Energy • Intelligent Systems
-
----
-
-## 🧩 Skills
-
-The portfolio showcases my experience across multiple areas of software development.
-
-### Programming Languages
-
-* C
-* C++
-* Python
-* Java
-* JavaScript
-
-### Frontend Development
+### Frontend
 
 * React.js
+* JavaScript
 * HTML5
 * CSS3
 * Tailwind CSS
-* Bootstrap
 
-### Backend Development
+### Backend
 
 * Node.js
 * Express.js
 * REST APIs
-* Socket.IO
 
-### Databases
+### Database
 
 * MongoDB
-* MySQL
-* PostgreSQL
+* Mongoose
 
-### AI / ML
-
-* Python
-* Machine Learning
-* NLP
-* Generative AI
-* MLOps
-
-### Tools & Platforms
+### Tools
 
 * Git
 * GitHub
@@ -153,125 +49,227 @@ The portfolio showcases my experience across multiple areas of software developm
 * Postman
 * Vercel
 * Render
-* MongoDB Atlas
 
 ---
 
-## 🏆 Achievements
+## 🏗️ Architecture
 
-The portfolio highlights my participation and achievements in:
-
-* 🏅 National-level hackathons
-* 🏆 PVG HackHub
-* 🏆 Innovera National Hackathon
-* 🏆 Nirman Hackathon — Amity University Mumbai
-* 👨‍💻 GirlScript Summer of Code
-* 🏏 College-level cricket tournaments
-
----
-
-## 📜 Certifications
-
-The portfolio includes certifications and learning achievements in areas including:
-
-* Artificial Intelligence
-* Generative AI
-* Machine Learning
-* Full-Stack Development
-* NLP
-* MLOps
-
----
-
-## 📱 Responsive Design
-
-The portfolio is built to work across different screen sizes:
-
-* 💻 Desktop
-* 💻 Laptop
-* 📱 Mobile
-* 📟 Tablet
-
----
-
-## ⚙️ Run Locally
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+```text
+                   ┌─────────────────────┐
+                   │      React.js       │
+                   │      Frontend       │
+                   └──────────┬──────────┘
+                              │
+                         REST APIs
+                              │
+                              ▼
+                   ┌─────────────────────┐
+                   │   Node.js + Express │
+                   │       Backend       │
+                   └──────────┬──────────┘
+                              │
+                              ▼
+                   ┌─────────────────────┐
+                   │      MongoDB        │
+                   │      Database       │
+                   └─────────────────────┘
 ```
-
-### 2. Navigate to the project
-
-```bash
-cd YOUR_REPOSITORY
-```
-
-### 3. Install dependencies
-
-```bash
-npm install
-```
-
-### 4. Start the development server
-
-```bash
-npm run dev
-```
-
-Open the local URL provided by Vite in your browser.
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-portfolio/
+CodeForge/
 │
-├── public/
-│   └── assets/
+├── client/
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       ├── assets/
+│       ├── context/
+│       ├── services/
+│       ├── App.jsx
+│       └── main.jsx
 │
-├── src/
-│   ├── components/
-│   ├── assets/
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
+├── server/
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── middleware/
+│   ├── config/
+│   └── server.js
 │
-├── package.json
-├── vite.config.js
-├── index.html
-└── README.md
+├── .gitignore
+├── README.md
+└── package.json
 ```
+
+> Update the structure if your repository uses a different organization.
+
+---
+
+## ⚙️ Installation
+
+### Clone the repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/codeforge.git
+cd codeforge
+```
+
+### Install dependencies
+
+If frontend and backend are separate:
+
+```bash
+cd client
+npm install
+```
+
+```bash
+cd ../server
+npm install
+```
+
+---
+
+## 🔑 Environment Variables
+
+Create a `.env` file in the backend directory.
+
+```env
+PORT=5000
+MONGO_URL=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+CLIENT_URL=http://localhost:5173
+```
+
+> ⚠️ Do not commit your `.env` file or expose sensitive credentials.
+
+---
+
+## ▶️ Run Locally
+
+### Start Backend
+
+```bash
+cd server
+npm run dev
+```
+
+### Start Frontend
+
+Open another terminal:
+
+```bash
+cd client
+npm run dev
+```
+
+The application will be available at the local URL provided by Vite.
+
+---
+
+## 🧪 API Testing
+
+Backend APIs can be tested using **Postman**.
+
+Typical API categories include:
+
+```text
+Authentication
+    ├── Register
+    └── Login
+
+Users
+    ├── Get Users
+    └── User Profile
+
+Projects / Coding
+    ├── Create
+    ├── Read
+    ├── Update
+    └── Delete
+```
+
+---
+
+## 📸 Screenshots
+
+### 🏠 Home
+
+*Add your CodeForge homepage screenshot here.*
+
+### 💻 Coding Interface
+
+*Add your coding interface screenshot here.*
+
+### 👤 User Dashboard
+
+*Add your dashboard screenshot here.*
+
+---
+
+## 🔮 Future Enhancements
+
+* 🤝 Real-time collaborative coding
+* 👥 Developer communities
+* 🏆 Coding challenges and leaderboards
+* 💬 Developer discussions
+* 🔔 Notifications
+* 📊 Coding analytics
+* 🤖 AI-powered code assistance
+* 🔍 Advanced project and code search
+* 🌐 Public developer profiles
+
+---
+
+## 📚 Learning Outcomes
+
+Building CodeForge provided practical experience with:
+
+* Full-stack application development
+* React component architecture
+* REST API development
+* Backend development using Node.js and Express
+* MongoDB database design
+* Authentication and authorization
+* CRUD operations
+* Frontend-backend integration
+* API testing
+* Deployment and production configuration
 
 ---
 
 ## 🌐 Deployment
 
-The portfolio is deployed using **Vercel**.
+The application can be deployed using:
 
-🔗 **Live Portfolio:**
-https://roshan-635.vercel.app/
+* **Frontend:** Vercel
+* **Backend:** Render
+* **Database:** MongoDB Atlas
 
----
+Add your deployed application URL here:
 
-## 🎯 Purpose
-
-This portfolio represents my ongoing journey in **software development, full-stack engineering, and AI/ML**.
-
-It is continuously updated as I build new projects, learn new technologies, participate in hackathons, and develop my technical skills.
+**Live Demo:** `YOUR_LIVE_URL`
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Developer
 
-**Roshan Jadhav**
+### Roshan Jadhav
 
 Computer Science Engineering Student
 Full-Stack Developer • AI/ML Enthusiast
 
 ---
 
-⭐ **Explore the portfolio:**
-https://roshan-635.vercel.app/
+## ⭐ Support
+
+If you found CodeForge interesting, consider giving this repository a ⭐.
+
+---
+
+### Built with ❤️ by Roshan Jadhav

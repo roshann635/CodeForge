@@ -1,5 +1,3 @@
-const fetch = globalThis.fetch || require("node-fetch");
-
 const JUDGE0_HOST = process.env.JUDGE0_HOST || "judge0-ce.p.rapidapi.com";
 const JUDGE0_URL = process.env.JUDGE0_URL || `https://${JUDGE0_HOST}`;
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY || "";

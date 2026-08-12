@@ -1,4 +1,4 @@
-const fetch = require("node-fetch");
+const fetch = globalThis.fetch || require("node-fetch");
 
 const JUDGE0_HOST = process.env.JUDGE0_HOST || "judge0-ce.p.rapidapi.com";
 const JUDGE0_URL = process.env.JUDGE0_URL || `https://${JUDGE0_HOST}`;
@@ -28,24 +28,34 @@ function getHeaders() {
 /**
  * Submit code to Judge0 for execution
  */
-async function submitToJudge0({ sourceCode, language, stdin = "", expectedOutput = "", cpuTimeLimit = 2, memoryLimit = 128000 }) {
+async function submitToJudge0({
+  sourceCode,
+  language,
+  stdin = "",
+  expectedOutput = "",
+  cpuTimeLimit = 2,
+  memoryLimit = 128000,
+}) {
   const languageId = LANGUAGE_IDS[language] || LANGUAGE_IDS.javascript;
 
   // If Judge0 API key is set or custom JUDGE0_URL is provided, call Judge0
   if (JUDGE0_API_KEY || process.env.JUDGE0_URL) {
     try {
-      const response = await fetch(`${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`, {
-        method: "POST",
-        headers: getHeaders(),
-        body: JSON.stringify({
-          source_code: sourceCode,
-          language_id: languageId,
-          stdin,
-          expected_output: expectedOutput,
-          cpu_time_limit: cpuTimeLimit,
-          memory_limit: memoryLimit,
-        }),
-      });
+      const response = await fetch(
+        `${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`,
+        {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({
+            source_code: sourceCode,
+            language_id: languageId,
+            stdin,
+            expected_output: expectedOutput,
+            cpu_time_limit: cpuTimeLimit,
+            memory_limit: memoryLimit,
+          }),
+        },
+      );
 
       if (!response.ok) {
         throw new Error(`Judge0 HTTP Error ${response.status}`);
@@ -54,7 +64,10 @@ async function submitToJudge0({ sourceCode, language, stdin = "", expectedOutput
       const data = await response.json();
       return parseJudge0Response(data);
     } catch (err) {
-      console.warn("Judge0 submission failed, falling back to local runner:", err.message);
+      console.warn(
+        "Judge0 submission failed, falling back to local runner:",
+        err.message,
+      );
     }
   }
 
@@ -135,7 +148,10 @@ async function executeFallback({ sourceCode, language, stdin = "" }) {
     const stderr = (data.run.stderr || "").trim();
 
     if (data.run.code !== 0) {
-      const isCompile = stderr.includes("error:") || stderr.includes("SyntaxError") || stderr.includes("compilation");
+      const isCompile =
+        stderr.includes("error:") ||
+        stderr.includes("SyntaxError") ||
+        stderr.includes("compilation");
       return {
         status: isCompile ? "COMPILATION_ERROR" : "RUNTIME_ERROR",
         statusDescription: stderr || stdout,

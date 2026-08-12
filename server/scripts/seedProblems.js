@@ -28,7 +28,14 @@ const rawProblems = [
       { input: "[3,2,4], 6", expected: "[1,2]", type: "PUBLIC" },
       { input: "[3,3], 6", expected: "[0,1]", type: "HIDDEN" },
       { input: "[-1,-2,-3,-4,-5], -8", expected: "[2,4]", type: "EDGE" }
-    ]
+    ],
+    referenceSolution: {
+      javascript: "function twoSum(nums, target) {\n  const map = {};\n  for (let i = 0; i < nums.length; i++) {\n    if (map[target - nums[i]] !== undefined) return [map[target - nums[i]], i];\n    map[nums[i]] = i;\n  }\n  return [];\n}",
+      python: "def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n    return []",
+      java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        java.util.Map<Integer, Integer> map = new java.util.HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            if (map.containsKey(target - nums[i])) return new int[]{map.get(target - nums[i]), i};\n            map.put(nums[i], i);\n        }\n        return new int[]{};\n    }\n}",
+      cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        unordered_map<int,int> m;\n        for (int i = 0; i < nums.size(); i++) {\n            if (m.count(target - nums[i])) return {m[target - nums[i]], i};\n            m[nums[i]] = i;\n        }\n        return {};\n    }\n};"
+    },
+    hints: ["Use a hash map to store complements for O(n) time complexity."]
   },
   {
     id: 2,
@@ -51,7 +58,14 @@ const rawProblems = [
       { input: "[-1,0,3,5,9,12], 2", expected: "-1", type: "PUBLIC" },
       { input: "[5], 5", expected: "0", type: "EDGE" },
       { input: "[1,2,3,4,5,6,7,8,9,10], 10", expected: "9", type: "HIDDEN" }
-    ]
+    ],
+    referenceSolution: {
+      javascript: "function search(nums, target) {\n  let l = 0, r = nums.length - 1;\n  while (l <= r) {\n    const m = Math.floor((l + r) / 2);\n    if (nums[m] === target) return m;\n    if (nums[m] < target) l = m + 1; else r = m - 1;\n  }\n  return -1;\n}",
+      python: "def search(nums, target):\n    l, r = 0, len(nums) - 1\n    while l <= r:\n        m = (l + r) // 2\n        if nums[m] == target: return m\n        if nums[m] < target: l = m + 1\n        else: r = m - 1\n    return -1",
+      java: "class Solution {\n    public int search(int[] nums, int target) {\n        int l = 0, r = nums.length - 1;\n        while (l <= r) {\n            int m = l + (r - l) / 2;\n            if (nums[m] == target) return m;\n            if (nums[m] < target) l = m + 1; else r = m - 1;\n        }\n        return -1;\n    }\n}",
+      cpp: "class Solution {\npublic:\n    int search(vector<int>& nums, int target) {\n        int l = 0, r = nums.size() - 1;\n        while (l <= r) {\n            int m = l + (r - l) / 2;\n            if (nums[m] == target) return m;\n            if (nums[m] < target) l = m + 1; else r = m - 1;\n        }\n        return -1;\n    }\n};"
+    },
+    hints: ["Use two pointers (left/right) and eliminate half the search space each iteration."]
   },
   {
     id: 3,
@@ -207,6 +221,8 @@ async function seed() {
           funcName: p.funcName,
           examples: p.examples,
           starterCode: p.starterCode,
+          referenceSolution: p.referenceSolution || {},
+          hints: p.hints || [],
           status: "PUBLISHED",
         },
         { upsert: true, new: true }

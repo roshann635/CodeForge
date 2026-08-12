@@ -6,7 +6,7 @@ const Problem = require("../models/Problem");
 const TestCase = require("../models/TestCase");
 const Submission = require("../models/Submission");
 const User = require("../models/User");
-const { processFullSubmission } = require("../services/submissionService");
+const { validateSubmission } = require("../services/submissionService");
 
 // Protect all admin routes for FACULTY or ADMIN role
 router.use(protect);
@@ -186,8 +186,7 @@ router.post("/problems/:id/validate", async (req, res) => {
       });
     }
 
-    const testResult = await processFullSubmission({
-      userId: req.user._id,
+    const testResult = await validateSubmission({
       numericProblemId,
       language,
       sourceCode: refCode,

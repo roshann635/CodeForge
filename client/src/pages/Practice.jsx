@@ -3,6 +3,7 @@ import { AuthContext } from "../context/AuthContext";
 import Editor from "@monaco-editor/react";
 import CodeReviewPanel from "../components/CodeReviewPanel";
 import API_BASE from "../config/api";
+import { Link } from "react-router-dom";
 import {
   Play,
   CheckCircle,
@@ -14,6 +15,7 @@ import {
   Clock,
   Cpu,
   Zap,
+  ExternalLink,
 } from "lucide-react";
 
 import { PROBLEMS } from "../data/problems.js";
@@ -60,12 +62,10 @@ export default function Practice() {
     }
   }, [selectedId, language]);
 
-  // Run against first test case only (quick check)
   const runCode = async () => {
     setIsRunning(true);
     setResults(null);
     try {
-      const tc = problem.testCases[0];
       const res = await fetch(`${API_BASE}/api/code/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,18 +73,14 @@ export default function Practice() {
           code,
           language,
           problemId: problem.id,
-          funcName: problem.funcName,
-          testCase: tc,
         }),
       });
       const data = await res.json();
       setResults({
         mode: "run",
         status: data.status,
-        output: data.output,
-        expected: data.expected,
-        passed: data.passed,
-        runtime: data.runtime,
+        results: data.results,
+        totalRuntime: data.totalRuntime,
         error: data.error,
       });
     } catch (e) {
@@ -97,26 +93,30 @@ export default function Practice() {
     setIsRunning(false);
   };
 
-  // Submit against ALL test cases
   const submitCode = async () => {
+    if (!token) {
+      setResults({ mode: "submit", status: "ERROR", error: "Please log in to submit." });
+      return;
+    }
     setIsSubmitting(true);
     setResults(null);
     try {
       const res = await fetch(`${API_BASE}/api/code/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           code,
           language,
           problemId: problem.id,
-          funcName: problem.funcName,
-          testCases: problem.testCases,
         }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message);
       setResults({ mode: "submit", ...data });
 
-      // Fetch AI Code Review
       fetch(`${API_BASE}/api/ai/code-review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,7 +126,7 @@ export default function Practice() {
         .then((review) => setCodeReview(review))
         .catch(() => {});
 
-      if (data.status === "accepted" && token) {
+      if (data.status === "ACCEPTED" && token) {
         fetch(`${API_BASE}/api/progress/update`, {
           method: "POST",
           headers: {
@@ -144,7 +144,7 @@ export default function Practice() {
       setResults({
         mode: "submit",
         status: "error",
-        error: "Backend unreachable.",
+        error: e.message || "Backend unreachable.",
       });
     }
     setIsSubmitting(false);
@@ -241,17 +241,12 @@ export default function Practice() {
           <h2 className="text-xl font-bold font-orbitron text-neon-cyan">
             {problem.id}. {problem.title}
           </h2>
-          <a
-            href={`#/codelab/${problem.id}`}
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.hash = `/codelab/${problem.id}`;
-              window.location.href = `/codelab/${problem.id}`;
-            }}
+          <Link
+            to={`/codelab/${problem.id}`}
             className="px-3 py-1 bg-neon-purple hover:bg-neon-purple/80 text-white rounded-lg text-xs font-bold shadow-[0_0_10px_#b026ff66] transition-all flex items-center gap-1.5"
           >
-            Open in CodeLab 💻
-          </a>
+            <ExternalLink size={12} /> Open in CodeLab
+          </Link>
         </div>
         <div className="flex gap-2 mb-4 flex-wrap">
           <span
@@ -378,36 +373,39 @@ export default function Practice() {
               {results.mode === "run" && (
                 <>
                   <div
-                    className={`flex items-center gap-2 text-sm font-bold ${results.passed ? "text-neon-green" : "text-red-400"}`}
+                    className={`flex items-center gap-2 text-sm font-bold ${results.status === "PASSED" ? "text-neon-green" : "text-red-400"}`}
                   >
-                    {results.passed ? (
+                    {results.status === "PASSED" ? (
                       <CheckCircle size={16} />
                     ) : (
                       <XCircle size={16} />
                     )}
-                    {results.passed
-                      ? "Test Passed"
+                    {results.status === "PASSED"
+                      ? "Public Tests Passed"
                       : results.status === "error"
                         ? "Error"
-                        : "Wrong Answer"}
+                        : "Test Failed"}
                   </div>
-                  {results.runtime > 0 && (
+                  {results.totalRuntime > 0 && (
                     <div className="flex items-center gap-2 text-gray-500 text-[11px]">
-                      <Clock size={12} /> Runtime: {results.runtime}ms
+                      <Clock size={12} /> Runtime: {results.totalRuntime}ms
                     </div>
                   )}
-                  {results.output && (
-                    <div>
-                      <span className="text-gray-500">Output:</span>{" "}
-                      {results.output}
+                  {results.results?.map((r, idx) => (
+                    <div key={idx} className="border-t border-dark-700 pt-2 mt-2">
+                      <span className="text-gray-500">Case {r.testCaseIndex}:</span>{" "}
+                      {r.passed ? (
+                        <span className="text-neon-green">Passed</span>
+                      ) : (
+                        <>
+                          <span className="text-red-400">Failed</span>
+                          {r.expected && (
+                            <span className="text-gray-500"> | Expected: {r.expected} | Got: {r.actual}</span>
+                          )}
+                        </>
+                      )}
                     </div>
-                  )}
-                  {results.expected && !results.passed && (
-                    <div>
-                      <span className="text-gray-500">Expected:</span>{" "}
-                      {results.expected}
-                    </div>
-                  )}
+                  ))}
                   {results.error && (
                     <div className="text-red-400">{results.error}</div>
                   )}
@@ -416,23 +414,30 @@ export default function Practice() {
               {results.mode === "submit" && (
                 <>
                   <div
-                    className={`flex items-center gap-2 text-sm font-bold ${results.status === "accepted" ? "text-neon-green" : "text-red-400"}`}
+                    className={`flex items-center gap-2 text-sm font-bold ${results.status === "ACCEPTED" ? "text-neon-green" : "text-red-400"}`}
                   >
-                    {results.status === "accepted" ? (
+                    {results.status === "ACCEPTED" ? (
                       <CheckCircle size={16} />
                     ) : (
                       <XCircle size={16} />
                     )}
-                    {results.status === "accepted"
+                    {results.status === "ACCEPTED"
                       ? "Accepted ✓"
-                      : `Wrong Answer (${results.passed}/${results.total} passed)`}
+                      : results.status === "PARTIAL_ACCEPTED"
+                        ? `Partial (${results.passed}/${results.total})`
+                        : results.status || "Wrong Answer"}
                   </div>
+                  {results.passed != null && (
+                    <div className="text-gray-400 text-[11px]">
+                      {results.passed}/{results.total} test cases passed ({results.passPercentage || 0}%)
+                    </div>
+                  )}
                   <div className="flex gap-4 text-[11px] text-gray-500">
                     <span className="flex items-center gap-1">
                       <Cpu size={12} /> Pass Rate: {results.passPercentage}%
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock size={12} /> Avg Runtime: {results.avgRuntime}ms
+                      <Clock size={12} /> Runtime: {results.runtime || 0}ms
                     </span>
                   </div>
                   {results.results &&

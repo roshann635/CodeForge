@@ -33,7 +33,7 @@ router.post("/run", async (req, res) => {
 /**
  * POST /api/code/submit — Full deterministic submission against ALL test cases
  */
-router.post("/submit", async (req, res) => {
+router.post("/submit", protect, async (req, res) => {
   try {
     const { code, language, problemId, assignmentId } = req.body;
     if (!code || !language || !problemId) {
@@ -41,7 +41,7 @@ router.post("/submit", async (req, res) => {
     }
 
     const numericProblemId = parseInt(problemId, 10);
-    const userId = req.user ? req.user._id : null;
+    const userId = req.user._id;
 
     const submissionDoc = await processFullSubmission({
       userId,

@@ -68,12 +68,20 @@ export default function FacultyDashboard() {
           </p>
         </div>
 
-        <Link
-          to="/admin/problems/new"
-          className="flex items-center gap-2 bg-neon-cyan hover:bg-neon-cyan/80 text-black px-4 py-2 rounded-xl font-bold text-xs shadow-[0_0_12px_#00f3ff55] transition-all"
-        >
-          <Plus size={16} /> Create New Problem
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            to="/admin/assignments/new"
+            className="flex items-center gap-2 bg-neon-purple hover:bg-neon-purple/80 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-[0_0_12px_#b026ff55] transition-all"
+          >
+            <Plus size={16} /> New Assignment
+          </Link>
+          <Link
+            to="/admin/problems/new"
+            className="flex items-center gap-2 bg-neon-cyan hover:bg-neon-cyan/80 text-black px-4 py-2 rounded-xl font-bold text-xs shadow-[0_0_12px_#00f3ff55] transition-all"
+          >
+            <Plus size={16} /> Create New Problem
+          </Link>
+        </div>
       </div>
 
       {/* Top Metrics Grid */}

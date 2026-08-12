@@ -34,6 +34,8 @@ import Leaderboard from "./pages/Leaderboard";
 import AdminLogin from "./pages/admin/AdminLogin";
 import FacultyDashboard from "./pages/admin/FacultyDashboard";
 import ProblemBuilder from "./pages/admin/ProblemBuilder";
+import AssignmentBuilder from "./pages/admin/AssignmentBuilder";
+import Assignments from "./pages/Assignments";
 
 function MainLayout() {
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -134,6 +136,7 @@ function MainLayout() {
           <Route path="/learn" element={<Learn />} />
           <Route path="/visualize" element={<Visualizer />} />
           <Route path="/practice" element={<Practice />} />
+          <Route path="/assignments" element={<Assignments />} />
           <Route path="/codelab/:problemId" element={<CodeLab />} />
           <Route path="/interview" element={<InterviewPrep />} />
           <Route path="/quiz/:topic" element={<Quiz />} />
@@ -143,6 +146,7 @@ function MainLayout() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<FacultyDashboard />} />
           <Route path="/admin/problems/new" element={<ProblemBuilder />} />
+          <Route path="/admin/assignments/new" element={<AssignmentBuilder />} />
         </Routes>
       </main>
     </div>
@@ -170,6 +174,7 @@ function Sidebar({ setSearchOpen }) {
     { to: "/learn", icon: BookOpen, label: "Learn Path" },
     { to: "/visualize", icon: BarChart3, label: "Visualizer" },
     { to: "/practice", icon: Terminal, label: "Practice HQ" },
+    { to: "/assignments", icon: BookOpen, label: "Assignments" },
     { to: "/codelab/1", icon: Terminal, label: "CodeLab IDE" },
     { to: "/interview", icon: Mic, label: "Interview Prep" },
   ];

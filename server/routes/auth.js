@@ -299,4 +299,60 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+const { protect } = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
+
+// @desc    Create faculty account (Admin only)
+// @route   POST /api/auth/create-faculty
+router.post("/create-faculty", protect, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const { name, email, password, department, batch, division } = req.body;
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: "User already exists with this email." });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: "FACULTY",
+      department: department || "CSE",
+      batch: batch || "2nd Year",
+      division: division || "Division A",
+      isVerified: true,
+    });
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @desc    List all users (Admin only)
+// @route   GET /api/auth/users
+router.get("/users", protect, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.role) filter.role = req.query.role;
+    if (req.query.department) filter.department = req.query.department;
+
+    const users = await User.find(filter)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = { router, JWT_SECRET };

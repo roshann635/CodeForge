@@ -287,6 +287,112 @@ Return ONLY a valid JSON (no markdown):
     return analyzeCodeWithRules(code, topic);
 }
 
+/**
+ * AI review AFTER deterministic judge result — never decides correctness.
+ */
+async function evaluateCodeWithContext({
+  sourceCode,
+  problem,
+  judgeStatus,
+  passedCount,
+  totalCases,
+  judgeResults = [],
+}) {
+  const failedCases = judgeResults.filter((r) => !r.passed);
+  const judgeSummary =
+    judgeStatus === "ACCEPTED"
+      ? "All test cases passed (deterministic judge verdict: ACCEPTED)."
+      : `${passedCount}/${totalCases} test cases passed (deterministic judge verdict: ${judgeStatus}).`;
+
+  const failureDetails = failedCases
+    .slice(0, 3)
+    .map(
+      (r, i) =>
+        `Failed case ${i + 1} (${r.testType || "PUBLIC"}): input=${r.input}, expected=${r.expected}, got=${r.actual || r.error || "N/A"}`,
+    )
+    .join("\n");
+
+  const expectedTime = problem?.expectedComplexity?.time || "O(n)";
+  const expectedSpace = problem?.expectedComplexity?.space || "O(1)";
+
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are a DSA mentor. The deterministic judge has ALREADY decided correctness — do NOT override it.
+
+Problem: "${problem?.title || "Unknown"}"
+Description: ${problem?.description || ""}
+Expected Complexity: ${expectedTime} time, ${expectedSpace} space
+
+Judge Result (FINAL — do not change): ${judgeSummary}
+${failureDetails ? `Failure Details:\n${failureDetails}` : ""}
+
+Student Code:
+\`\`\`
+${sourceCode}
+\`\`\`
+
+Provide educational feedback ONLY. Never say "Accepted" or "Wrong Answer" as your own verdict — refer to the judge result.
+
+Return ONLY valid JSON:
+{
+  "correctness": "explain judge result in plain language",
+  "optimization": "specific improvement suggestions",
+  "explanation": "why failures happened or what was done well",
+  "estimatedComplexity": "actual time/space complexity of student code",
+  "codeQuality": <0-100>
+}`
+            }]
+          }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 768 }
+        })
+      });
+      const data = await response.json();
+      if (data.candidates && data.candidates[0]) {
+        const rawText = data.candidates[0].content.parts[0].text;
+        const cleanJson = rawText.replace(/```json|```/g, "").trim();
+        const aiResult = JSON.parse(cleanJson);
+        return {
+          correctness: aiResult.correctness || judgeSummary,
+          optimization: aiResult.optimization || "Review your edge cases and boundary conditions.",
+          explanation: aiResult.explanation || "",
+          estimatedComplexity: aiResult.estimatedComplexity || `${expectedTime} time, ${expectedSpace} space`,
+          codeQuality: Math.min(100, Math.max(0, Number(aiResult.codeQuality) || 75)),
+        };
+      }
+    } catch (e) {
+      console.warn("Gemini context review failed:", e.message);
+    }
+  }
+
+  const ruleResult = analyzeCodeWithRules(sourceCode, problem?.title || "");
+  let optimization = "Consider reviewing algorithm choice and edge cases.";
+  if (failedCases.length > 0) {
+    const hasHidden = failedCases.some((r) => r.testType === "HIDDEN" || r.testType === "EDGE");
+    optimization = hasHidden
+      ? "Hidden/edge cases failed — check boundary conditions, empty inputs, and overflow."
+      : "Some public test cases failed — trace through the failing input manually.";
+  } else if (judgeStatus === "ACCEPTED") {
+    optimization = ruleResult.is_optimal
+      ? "Solution accepted. Consider if a more optimal approach exists."
+      : "Accepted, but time/space complexity may be improvable.";
+  }
+
+  return {
+    correctness: judgeSummary,
+    optimization,
+    explanation: ruleResult.strengths?.join(". ") || ruleResult.issues?.join(". ") || "Review complete.",
+    estimatedComplexity: `${ruleResult.time_complexity || expectedTime} time, ${ruleResult.space_complexity || expectedSpace} space`,
+    codeQuality: ruleResult.code_score || 75,
+  };
+}
+
 function analyzeCodeWithRules(code, topic) {
     let score = 0;
     const codeStr = code || "";
@@ -337,4 +443,4 @@ function analyzeCodeWithRules(code, topic) {
     };
 }
 
-module.exports = { analyzeVoice, evaluateCode, analyzeCodeWithRules };
+module.exports = { analyzeVoice, evaluateCode, evaluateCodeWithContext, analyzeCodeWithRules };

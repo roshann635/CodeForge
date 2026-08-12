@@ -2,8 +2,87 @@ const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/authMiddleware");
 const User = require("../models/User");
+const Problem = require("../models/Problem");
+const TestCase = require("../models/TestCase");
 
-const problems = [
+router.get("/problems", async (req, res) => {
+  try {
+    const filter = { status: "PUBLISHED" };
+    if (req.query.topic) filter.topic = req.query.topic;
+    if (req.query.difficulty) filter.difficulty = req.query.difficulty;
+
+    const problems = await Problem.find(filter)
+      .sort({ problemId: 1 })
+      .select("problemId title difficulty topic tags description funcName examples status")
+      .lean();
+
+    res.json(
+      problems.map((p) => ({
+        id: p.problemId,
+        title: p.title,
+        difficulty: p.difficulty,
+        tags: p.tags,
+        topic: p.topic,
+        description: p.description,
+        funcName: p.funcName,
+        examples: p.examples,
+      })),
+    );
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch problems" });
+  }
+});
+
+router.get("/problems/:id", async (req, res) => {
+  try {
+    const numericId = parseInt(req.params.id, 10);
+    const problem = await Problem.findOne({
+      problemId: numericId,
+      status: "PUBLISHED",
+    }).lean();
+
+    if (!problem) {
+      return res.status(404).json({ error: "Problem not found" });
+    }
+
+    const publicTestCases = await TestCase.find({
+      numericProblemId: numericId,
+      type: "PUBLIC",
+    })
+      .sort({ orderIndex: 1 })
+      .select("input expectedOutput type orderIndex")
+      .lean();
+
+    res.json({
+      id: problem.problemId,
+      title: problem.title,
+      difficulty: problem.difficulty,
+      tags: problem.tags,
+      topic: problem.topic,
+      subtopic: problem.subtopic,
+      description: problem.description,
+      funcName: problem.funcName,
+      constraints: problem.constraints,
+      inputFormat: problem.inputFormat,
+      outputFormat: problem.outputFormat,
+      examples: problem.examples,
+      hints: problem.hints,
+      starterCode: problem.starterCode,
+      expectedComplexity: problem.expectedComplexity,
+      timeLimitMs: problem.timeLimitMs,
+      memoryLimitKb: problem.memoryLimitKb,
+      publicTestCases: publicTestCases.map((tc) => ({
+        input: tc.input,
+        expected: tc.expectedOutput,
+        type: tc.type,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch problem" });
+  }
+});
+
+const problemsLegacy = [
   {
     id: 1,
     title: "Two Sum",
@@ -64,8 +143,9 @@ const problems = [
   },
 ];
 
-router.get("/problems", (req, res) => {
-  res.json(problems);
+// Legacy endpoint kept for backward compatibility — redirects to DB-backed list
+router.get("/problems-legacy", (req, res) => {
+  res.json(problemsLegacy);
 });
 
 const quizData = {

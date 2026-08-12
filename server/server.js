@@ -13,6 +13,7 @@ const interviewRoutes = require("./routes/interview");
 const proctorRoutes = require("./routes/proctor");
 const adminRoutes = require("./routes/admin");
 const assignmentRoutes = require("./routes/assignments");
+const analyticsRoutes = require("./routes/analytics");
 
 const app = express();
 
@@ -56,6 +57,9 @@ app.use("/api/admin", adminRoutes);
 
 // Assignment routes
 app.use("/api/assignments", assignmentRoutes);
+
+// Faculty analytics routes
+app.use("/api/analytics", analyticsRoutes);
 
 app.get("/health", (req, res) => res.send("CodeForge Backend is Running"));
 

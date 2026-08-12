@@ -3,49 +3,9 @@ const TestCase = require("../models/TestCase");
 const Submission = require("../models/Submission");
 const User = require("../models/User");
 const { submitToJudge0 } = require("./judge0Service");
-const { evaluateCode } = require("../ai/ruleEngine");
-
-/**
- * Normalize output string for deterministic comparison
- */
-function normalizeOutput(str) {
-  if (!str) return "";
-  return str
-    .replace(/\r\n/g, "\n")
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/'/g, '"')
-    .replace(/True/g, "true")
-    .replace(/False/g, "false")
-    .replace(/None/g, "null")
-    .toLowerCase();
-}
-
-/**
- * Wraps function call code for standard test execution when needed
- */
-function wrapCodeForExecution(sourceCode, language, funcName, testInput) {
-  if (!funcName) return sourceCode;
-
-  let formattedArgs = testInput;
-  if (!formattedArgs.startsWith("[") && formattedArgs.includes("], ")) {
-    formattedArgs = formattedArgs
-      .split("], ")
-      .map((s, i) => (i === 0 ? s + "]" : s))
-      .join(", ");
-  }
-
-  if (language === "javascript") {
-    return `${sourceCode}\nconst result = ${funcName}(${formattedArgs});\nconsole.log(JSON.stringify(result));`;
-  } else if (language === "python") {
-    const pyFunc = funcName.replace(/[A-Z]/g, (l) => "_" + l.toLowerCase());
-    return `import json\n${sourceCode}\nresult = ${pyFunc}(${formattedArgs})\nprint(json.dumps(result))`;
-  } else if (language === "cpp") {
-    // Standard input reading or wrapping
-    return sourceCode;
-  }
-  return sourceCode;
-}
+const { wrapCodeForExecution } = require("./codeWrapper");
+const { normalizeOutput } = require("./outputUtils");
+const { evaluateCodeWithContext } = require("../ai/ruleEngine");
 
 /**
  * Run public test cases (Quick Run)
@@ -81,28 +41,36 @@ async function runPublicTestCases({ numericProblemId, language, sourceCode, cust
   for (let i = 0; i < testCases.length; i++) {
     const tc = testCases[i];
     const funcName = problem ? problem.funcName : null;
-    const execCode = wrapCodeForExecution(sourceCode, language, funcName, tc.input);
+    const wrapped = wrapCodeForExecution(sourceCode, language, funcName, tc.input);
 
     const judgeRes = await submitToJudge0({
-      sourceCode: execCode,
+      sourceCode: wrapped.code,
       language,
-      stdin: tc.input,
+      stdin: wrapped.stdin,
       expectedOutput: tc.expectedOutput,
     });
 
     totalTime += judgeRes.time || 0;
-    const actualNorm = normalizeOutput(judgeRes.stdout);
-    const expectedNorm = normalizeOutput(tc.expectedOutput);
-    const passed = tc.expectedOutput ? actualNorm === expectedNorm : judgeRes.status === "ACCEPTED";
+
+    const isExecFailure = ["COMPILATION_ERROR", "RUNTIME_ERROR", "TIME_LIMIT_EXCEEDED", "MEMORY_LIMIT_EXCEEDED"].includes(
+      judgeRes.status,
+    );
+
+    let passed = false;
+    if (!isExecFailure) {
+      const actualNorm = normalizeOutput(judgeRes.stdout);
+      const expectedNorm = normalizeOutput(tc.expectedOutput);
+      passed = tc.expectedOutput ? actualNorm === expectedNorm : judgeRes.status === "ACCEPTED";
+    }
 
     results.push({
       testCaseIndex: i + 1,
       input: tc.input,
       expected: tc.expectedOutput,
       actual: judgeRes.stdout,
-      error: judgeRes.stderr || judgeRes.compileOutput,
+      error: judgeRes.compileOutput || judgeRes.stderr || null,
       passed,
-      status: judgeRes.status,
+      status: isExecFailure ? judgeRes.status : passed ? "ACCEPTED" : "WRONG_ANSWER",
       time: judgeRes.time,
     });
   }
@@ -112,6 +80,71 @@ async function runPublicTestCases({ numericProblemId, language, sourceCode, cust
     status: allPassed ? "PASSED" : "FAILED",
     results,
     totalRuntime: totalTime,
+  };
+}
+
+/**
+ * Judge code against all test cases without saving (for validation scripts)
+ */
+async function validateSubmission({ numericProblemId, language, sourceCode }) {
+  const problem = await Problem.findOne({ problemId: numericProblemId });
+  if (!problem) throw new Error(`Problem #${numericProblemId} not found.`);
+
+  let dbTestCases = await TestCase.find({ numericProblemId }).sort({ orderIndex: 1 });
+  if (dbTestCases.length === 0 && problem.examples) {
+    dbTestCases = problem.examples.map((ex, idx) => ({
+      _id: null,
+      input: ex.input,
+      expectedOutput: ex.output,
+      type: idx === 0 ? "PUBLIC" : "HIDDEN",
+    }));
+  }
+
+  const judgeResults = [];
+  let passedCount = 0;
+  let overallStatus = "ACCEPTED";
+
+  for (const tc of dbTestCases) {
+    const wrapped = wrapCodeForExecution(sourceCode, language, problem.funcName, tc.input);
+    const judgeRes = await submitToJudge0({
+      sourceCode: wrapped.code,
+      language,
+      stdin: wrapped.stdin,
+      expectedOutput: tc.expectedOutput,
+      cpuTimeLimit: Math.ceil(problem.timeLimitMs / 1000),
+      memoryLimit: problem.memoryLimitKb,
+    });
+
+    let passed = false;
+    if (judgeRes.status === "COMPILATION_ERROR") overallStatus = "COMPILATION_ERROR";
+    else if (judgeRes.status === "TIME_LIMIT_EXCEEDED" && overallStatus === "ACCEPTED") overallStatus = "TIME_LIMIT_EXCEEDED";
+    else if (judgeRes.status === "MEMORY_LIMIT_EXCEEDED" && overallStatus === "ACCEPTED") overallStatus = "MEMORY_LIMIT_EXCEEDED";
+    else if (judgeRes.status === "RUNTIME_ERROR" && overallStatus === "ACCEPTED") overallStatus = "RUNTIME_ERROR";
+    else {
+      passed = normalizeOutput(judgeRes.stdout) === normalizeOutput(tc.expectedOutput);
+      if (!passed && overallStatus === "ACCEPTED") overallStatus = "WRONG_ANSWER";
+    }
+    if (passed) passedCount++;
+
+    judgeResults.push({
+      testType: tc.type || "PUBLIC",
+      input: tc.input,
+      expected: tc.expectedOutput,
+      actual: judgeRes.stdout,
+      passed,
+      status: passed ? "ACCEPTED" : judgeRes.status,
+    });
+
+    if (overallStatus === "COMPILATION_ERROR") break;
+  }
+
+  if (overallStatus === "WRONG_ANSWER" && passedCount > 0) overallStatus = "PARTIAL_ACCEPTED";
+
+  return {
+    status: overallStatus,
+    testCasesPassed: passedCount,
+    totalTestCases: dbTestCases.length,
+    judgeResults,
   };
 }
 
@@ -147,11 +180,11 @@ async function processFullSubmission({ userId, numericProblemId, language, sourc
   let overallStatus = "ACCEPTED";
 
   for (const tc of dbTestCases) {
-    const execCode = wrapCodeForExecution(sourceCode, language, problem.funcName, tc.input);
+    const wrapped = wrapCodeForExecution(sourceCode, language, problem.funcName, tc.input);
     const judgeRes = await submitToJudge0({
-      sourceCode: execCode,
+      sourceCode: wrapped.code,
       language,
-      stdin: tc.input,
+      stdin: wrapped.stdin,
       expectedOutput: tc.expectedOutput,
       cpuTimeLimit: Math.ceil(problem.timeLimitMs / 1000),
       memoryLimit: problem.memoryLimitKb,
@@ -167,6 +200,8 @@ async function processFullSubmission({ userId, numericProblemId, language, sourc
       overallStatus = "COMPILATION_ERROR";
     } else if (judgeRes.status === "TIME_LIMIT_EXCEEDED") {
       if (overallStatus !== "COMPILATION_ERROR") overallStatus = "TIME_LIMIT_EXCEEDED";
+    } else if (judgeRes.status === "MEMORY_LIMIT_EXCEEDED") {
+      if (overallStatus === "ACCEPTED") overallStatus = "MEMORY_LIMIT_EXCEEDED";
     } else if (judgeRes.status === "RUNTIME_ERROR") {
       if (overallStatus !== "COMPILATION_ERROR" && overallStatus !== "TIME_LIMIT_EXCEEDED") {
         overallStatus = "RUNTIME_ERROR";
@@ -227,13 +262,20 @@ async function processFullSubmission({ userId, numericProblemId, language, sourc
 
   // AI Explanation/Review generated AFTER deterministic result
   try {
-    const aiRes = await evaluateCode(sourceCode, problem.title);
+    const aiRes = await evaluateCodeWithContext({
+      sourceCode,
+      problem,
+      judgeStatus: overallStatus,
+      passedCount,
+      totalCases: dbTestCases.length,
+      judgeResults,
+    });
     submission.aiReview = {
-      correctness: overallStatus === "ACCEPTED" ? "Passed all deterministic test cases." : `${passedCount}/${dbTestCases.length} test cases passed.`,
-      optimization: aiRes.issues ? aiRes.issues.join(". ") : "Good solution.",
-      codeQuality: aiRes.code_score || 80,
-      explanation: aiRes.strengths ? aiRes.strengths.join(". ") : "Review complete.",
-      estimatedComplexity: `${aiRes.time_complexity || "O(n)"} time, ${aiRes.space_complexity || "O(1)"} space`,
+      correctness: aiRes.correctness,
+      optimization: aiRes.optimization,
+      codeQuality: aiRes.codeQuality || 80,
+      explanation: aiRes.explanation,
+      estimatedComplexity: aiRes.estimatedComplexity,
     };
     await submission.save();
   } catch (err) {
@@ -262,6 +304,6 @@ async function processFullSubmission({ userId, numericProblemId, language, sourc
 
 module.exports = {
   runPublicTestCases,
+  validateSubmission,
   processFullSubmission,
-  normalizeOutput,
 };

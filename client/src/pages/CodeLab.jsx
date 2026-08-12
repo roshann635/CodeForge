@@ -22,7 +22,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-import { PROBLEMS } from "../data/problems.js";
+import { PROBLEMS as FALLBACK_PROBLEMS } from "../data/problems.js";
 
 const diffColors = {
   Easy: "text-neon-green bg-neon-green/10 border-neon-green/40",
@@ -36,7 +36,8 @@ export default function CodeLab() {
   const { token, user } = useContext(AuthContext);
 
   const numericId = parseInt(problemId || "1", 10);
-  const problem = PROBLEMS.find((p) => p.id === numericId) || PROBLEMS[0];
+  const [problem, setProblem] = useState(null);
+  const [loadingProblem, setLoadingProblem] = useState(true);
 
   const [language, setLanguage] = useState("cpp");
   const [code, setCode] = useState("");
@@ -56,9 +57,31 @@ export default function CodeLab() {
   };
 
   useEffect(() => {
+    const fetchProblem = async () => {
+      setLoadingProblem(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/problems/${numericId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProblem(data);
+        } else {
+          const fallback = FALLBACK_PROBLEMS.find((p) => p.id === numericId) || FALLBACK_PROBLEMS[0];
+          setProblem(fallback);
+        }
+      } catch {
+        const fallback = FALLBACK_PROBLEMS.find((p) => p.id === numericId) || FALLBACK_PROBLEMS[0];
+        setProblem(fallback);
+      }
+      setLoadingProblem(false);
+    };
+    fetchProblem();
+  }, [numericId]);
+
+  useEffect(() => {
+    if (!problem) return;
     const starter = problem.starterCode ? problem.starterCode[language] : "";
     setCode(starter || "// Write code here\n");
-  }, [numericId, language]);
+  }, [numericId, language, problem]);
 
   useEffect(() => {
     if (token && numericId) {
@@ -103,6 +126,11 @@ export default function CodeLab() {
 
   // Full Submission (Deterministic Judge across Public + Hidden + Edge Cases)
   const handleSubmit = async () => {
+    if (!token) {
+      setSubmitResult({ status: "ERROR", error: "Please log in to submit your solution." });
+      setActiveTab("console");
+      return;
+    }
     setIsSubmitting(true);
     setSubmitResult(null);
     setActiveTab("console");
@@ -127,6 +155,14 @@ export default function CodeLab() {
     }
     setIsSubmitting(false);
   };
+
+  if (loadingProblem || !problem) {
+    return (
+      <div className="h-screen bg-dark-900 flex items-center justify-center text-gray-400">
+        <Loader className="animate-spin mr-2" size={20} /> Loading problem...
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-dark-900 text-white flex flex-col overflow-hidden">
@@ -249,9 +285,14 @@ export default function CodeLab() {
               >
                 <Lightbulb size={14} /> {showHint ? "Hide Hint" : "Need a Hint?"}
               </button>
-              {showHint && (
+              {showHint && problem.hints && problem.hints.length > 0 && (
                 <div className="mt-2 p-3 bg-neon-yellow/10 border border-neon-yellow/30 rounded-lg text-xs text-gray-300 animate-fade-in">
-                  💡 Consider using a Hash Map to store compliment values and check target in a single pass O(n).
+                  💡 {problem.hints[0]}
+                </div>
+              )}
+              {showHint && (!problem.hints || problem.hints.length === 0) && (
+                <div className="mt-2 p-3 bg-neon-yellow/10 border border-neon-yellow/30 rounded-lg text-xs text-gray-300 animate-fade-in">
+                  💡 Consider edge cases and optimal time complexity for this problem.
                 </div>
               )}
             </div>

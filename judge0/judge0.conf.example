@@ -1,0 +1,30 @@
+################################################################################
+# Judge0 CE — CodeForge self-hosted configuration
+# Copy from judge0.conf.example and change passwords before production use.
+################################################################################
+
+# --- Required: database & cache passwords ---
+REDIS_PASSWORD=CHANGE_ME_redis_password_32chars
+POSTGRES_PASSWORD=CHANGE_ME_postgres_password_32chars
+
+POSTGRES_HOST=db
+POSTGRES_DB=judge0
+POSTGRES_USER=judge0
+
+REDIS_HOST=redis
+
+# --- Optional API auth (recommended when exposed beyond localhost) ---
+# CodeForge sends this via JUDGE0_AUTH_TOKEN in server/.env
+AUTHN_HEADER=X-Auth-Token
+AUTHN_TOKEN=CHANGE_ME_judge0_api_token
+
+# --- Sandbox defaults (match CodeForge problem limits) ---
+CPU_TIME_LIMIT=5
+WALL_TIME_LIMIT=10
+MEMORY_LIMIT=128000
+MAX_CPU_TIME_LIMIT=15
+MAX_MEMORY_LIMIT=512000
+
+ENABLE_WAIT_RESULT=true
+ENABLE_BATCHED_SUBMISSIONS=true
+JUDGE0_TELEMETRY_ENABLE=false

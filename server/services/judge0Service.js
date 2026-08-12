@@ -1,83 +1,52 @@
 const JUDGE0_HOST = process.env.JUDGE0_HOST || "judge0-ce.p.rapidapi.com";
-const JUDGE0_URL = process.env.JUDGE0_URL || `https://${JUDGE0_HOST}`;
+const JUDGE0_URL = process.env.JUDGE0_URL || (process.env.JUDGE0_API_KEY ? `https://${JUDGE0_HOST}` : "");
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY || "";
+const JUDGE0_AUTH_TOKEN = process.env.JUDGE0_AUTH_TOKEN || "";
+const JUDGE0_AUTH_HEADER = process.env.JUDGE0_AUTH_HEADER || "X-Auth-Token";
 
 const LANGUAGE_IDS = {
-  cpp: 54, // C++ (GCC 9.2.0)
-  java: 62, // Java (OpenJDK 13.0.1)
-  python: 71, // Python (3.8.1)
-  javascript: 63, // JavaScript (Node.js 12.14.0)
+  cpp: 54,
+  java: 62,
+  python: 71,
+  javascript: 63,
 };
 
-/**
- * Get headers for Judge0 request
- */
+const TERMINAL_STATUSES = new Set([
+  "ACCEPTED",
+  "WRONG_ANSWER",
+  "COMPILATION_ERROR",
+  "RUNTIME_ERROR",
+  "TIME_LIMIT_EXCEEDED",
+  "MEMORY_LIMIT_EXCEEDED",
+]);
+
+function isSelfHosted() {
+  return Boolean(process.env.JUDGE0_URL);
+}
+
+function isJudge0Configured() {
+  return Boolean(JUDGE0_API_KEY || process.env.JUDGE0_URL);
+}
+
 function getHeaders() {
-  const headers = {
-    "Content-Type": "application/json",
-  };
+  const headers = { "Content-Type": "application/json" };
+
   if (JUDGE0_API_KEY) {
+    // RapidAPI hosted Judge0
     headers["X-RapidAPI-Key"] = JUDGE0_API_KEY;
     headers["X-RapidAPI-Host"] = JUDGE0_HOST;
+  } else if (JUDGE0_AUTH_TOKEN) {
+    // Self-hosted Judge0 (AUTHN_TOKEN in judge0.conf)
+    headers[JUDGE0_AUTH_HEADER] = JUDGE0_AUTH_TOKEN;
   }
+
   return headers;
 }
 
 /**
- * Submit code to Judge0 for execution
- */
-async function submitToJudge0({
-  sourceCode,
-  language,
-  stdin = "",
-  expectedOutput = "",
-  cpuTimeLimit = 2,
-  memoryLimit = 128000,
-}) {
-  const languageId = LANGUAGE_IDS[language] || LANGUAGE_IDS.javascript;
-
-  // If Judge0 API key is set or custom JUDGE0_URL is provided, call Judge0
-  if (JUDGE0_API_KEY || process.env.JUDGE0_URL) {
-    try {
-      const response = await fetch(
-        `${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`,
-        {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            source_code: sourceCode,
-            language_id: languageId,
-            stdin,
-            expected_output: expectedOutput,
-            cpu_time_limit: cpuTimeLimit,
-            memory_limit: memoryLimit,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`Judge0 HTTP Error ${response.status}`);
-      }
-
-      const data = await response.json();
-      return parseJudge0Response(data);
-    } catch (err) {
-      console.warn(
-        "Judge0 submission failed, falling back to local runner:",
-        err.message,
-      );
-    }
-  }
-
-  // Fallback engine if Judge0 API key is not configured yet
-  return executeFallback({ sourceCode, language, stdin, expectedOutput });
-}
-
-/**
- * Normalize Judge0 response status codes
  * Judge0 Status IDs:
- * 1: In Queue, 2: Processing, 3: Accepted, 4: Wrong Answer,
- * 5: Time Limit Exceeded, 6: Compilation Error, 7-12: Runtime Error/MLE
+ * 3 Accepted, 4 Wrong Answer, 5 TLE, 6 CE,
+ * 7-12 Runtime errors / MLE variants
  */
 function parseJudge0Response(data) {
   const statusId = data.status ? data.status.id : 0;
@@ -88,6 +57,7 @@ function parseJudge0Response(data) {
   else if (statusId === 4) status = "WRONG_ANSWER";
   else if (statusId === 5) status = "TIME_LIMIT_EXCEEDED";
   else if (statusId === 6) status = "COMPILATION_ERROR";
+  else if (statusId === 11 || statusId === 12) status = "MEMORY_LIMIT_EXCEEDED";
   else if (statusId >= 7 && statusId <= 12) status = "RUNTIME_ERROR";
 
   return {
@@ -96,86 +66,122 @@ function parseJudge0Response(data) {
     stdout: (data.stdout || "").trim(),
     stderr: (data.stderr || "").trim(),
     compileOutput: (data.compile_output || "").trim(),
-    time: data.time ? parseFloat(data.time) * 1000 : 0, // convert sec to ms
-    memory: data.memory || 0, // KB
+    time: data.time ? parseFloat(data.time) * 1000 : 0,
+    memory: data.memory || 0,
     token: data.token,
   };
 }
 
-/**
- * Fallback execution for dev/offline testing when Judge0 API key is pending
- */
-const PISTON_API = "https://emkc.org/api/v2/piston/execute";
-const PISTON_LANGS = {
-  javascript: { language: "javascript", version: "18.15.0" },
-  python: { language: "python", version: "3.10.0" },
-  java: { language: "java", version: "15.0.2" },
-  cpp: { language: "c++", version: "10.2.0" },
-};
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-async function executeFallback({ sourceCode, language, stdin = "" }) {
-  try {
-    const config = PISTON_LANGS[language] || PISTON_LANGS.javascript;
-    const startTime = Date.now();
-    const response = await fetch(PISTON_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        language: config.language,
-        version: config.version,
-        files: [{ content: sourceCode }],
-        stdin,
-      }),
+async function pollJudge0Result(token, maxAttempts = 10) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await sleep(1000);
+
+    const response = await fetch(`${JUDGE0_URL}/submissions/${token}?base64_encoded=false`, {
+      headers: getHeaders(),
     });
-    const elapsed = Date.now() - startTime;
+
+    if (!response.ok) {
+      throw new Error(`Judge0 poll HTTP Error ${response.status}`);
+    }
+
     const data = await response.json();
+    const statusId = data.status?.id;
 
-    if (!data.run) {
-      return {
-        status: "RUNTIME_ERROR",
-        statusDescription: data.message || "Execution Error",
-        stdout: "",
-        stderr: data.message || "",
-        compileOutput: "",
-        time: elapsed,
-        memory: 0,
-      };
-    }
+    if (statusId === 1 || statusId === 2) continue;
 
-    const stdout = (data.run.stdout || "").trim();
-    const stderr = (data.run.stderr || "").trim();
+    return parseJudge0Response(data);
+  }
 
-    if (data.run.code !== 0) {
-      const isCompile =
-        stderr.includes("error:") ||
-        stderr.includes("SyntaxError") ||
-        stderr.includes("compilation");
-      return {
-        status: isCompile ? "COMPILATION_ERROR" : "RUNTIME_ERROR",
-        statusDescription: stderr || stdout,
-        stdout,
-        stderr,
-        compileOutput: stderr,
-        time: elapsed,
-        memory: 0,
-      };
-    }
+  throw new Error("Judge0 execution timed out while polling for result");
+}
 
+async function submitViaJudge0({
+  sourceCode,
+  languageId,
+  stdin,
+  expectedOutput,
+  cpuTimeLimit,
+  memoryLimit,
+}) {
+  const useAsync = process.env.JUDGE0_ASYNC === "true";
+
+  const body = {
+    source_code: sourceCode,
+    language_id: languageId,
+    stdin: stdin || "",
+    cpu_time_limit: cpuTimeLimit,
+    memory_limit: memoryLimit,
+  };
+
+  if (expectedOutput) body.expected_output = expectedOutput;
+
+  const query = useAsync ? "base64_encoded=false" : "base64_encoded=false&wait=true";
+
+  const response = await fetch(`${JUDGE0_URL}/submissions?${query}`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Judge0 HTTP Error ${response.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+
+  if (useAsync && data.token) {
+    return pollJudge0Result(data.token);
+  }
+
+  return parseJudge0Response(data);
+}
+
+async function submitToJudge0({
+  sourceCode,
+  language,
+  stdin = "",
+  expectedOutput = "",
+  cpuTimeLimit = 2,
+  memoryLimit = 128000,
+}) {
+  const languageId = LANGUAGE_IDS[language] || LANGUAGE_IDS.javascript;
+
+  if (!isJudge0Configured()) {
+    const hint = isSelfHosted()
+      ? "Set JUDGE0_URL in server/.env (e.g. http://localhost:2358). Run: cd judge0 && ./start.sh"
+      : "Set JUDGE0_URL for self-hosted OR JUDGE0_API_KEY for RapidAPI. See judge0/README.md";
     return {
-      status: "ACCEPTED",
-      statusDescription: "Accepted",
-      stdout,
-      stderr,
+      status: "RUNTIME_ERROR",
+      statusDescription: "Judge0 not configured",
+      stdout: "",
+      stderr: hint,
       compileOutput: "",
-      time: elapsed,
+      time: 0,
       memory: 0,
     };
+  }
+
+  try {
+    return await submitViaJudge0({
+      sourceCode,
+      languageId,
+      stdin,
+      expectedOutput,
+      cpuTimeLimit,
+      memoryLimit,
+    });
   } catch (err) {
+    console.error("Judge0 submission failed:", err.message);
     return {
       status: "RUNTIME_ERROR",
       statusDescription: err.message,
       stdout: "",
-      stderr: err.message,
+      stderr: `Judge execution failed: ${err.message}`,
       compileOutput: "",
       time: 0,
       memory: 0,
@@ -183,7 +189,25 @@ async function executeFallback({ sourceCode, language, stdin = "" }) {
   }
 }
 
+/** Health check for scripts / startup */
+async function checkJudge0Health() {
+  if (!JUDGE0_URL) return { ok: false, error: "JUDGE0_URL not set" };
+  try {
+    const res = await fetch(`${JUDGE0_URL}/about`, { headers: getHeaders() });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const data = await res.json();
+    return { ok: true, version: data.version, mode: isSelfHosted() ? "self-hosted" : "rapidapi" };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 module.exports = {
   submitToJudge0,
+  parseJudge0Response,
+  isJudge0Configured,
+  isSelfHosted,
+  checkJudge0Health,
   LANGUAGE_IDS,
+  TERMINAL_STATUSES,
 };

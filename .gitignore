@@ -3,11 +3,13 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
-# Environment variables
+# Environment variables & secrets
 .env
 client/.env
 server/.env
 *.env.local
+judge0/judge0.conf
+!judge0/judge0.conf.example
 
 # Build outputs
 dist/

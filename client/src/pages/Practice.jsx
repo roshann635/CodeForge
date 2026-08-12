@@ -237,9 +237,22 @@ export default function Practice() {
 
       {/* Problem Description */}
       <div className="w-80 flex-shrink-0 glass-panel p-5 overflow-y-auto">
-        <h2 className="text-xl font-bold font-orbitron text-neon-cyan mb-3">
-          {problem.id}. {problem.title}
-        </h2>
+        <div className="flex justify-between items-start mb-3">
+          <h2 className="text-xl font-bold font-orbitron text-neon-cyan">
+            {problem.id}. {problem.title}
+          </h2>
+          <a
+            href={`#/codelab/${problem.id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.hash = `/codelab/${problem.id}`;
+              window.location.href = `/codelab/${problem.id}`;
+            }}
+            className="px-3 py-1 bg-neon-purple hover:bg-neon-purple/80 text-white rounded-lg text-xs font-bold shadow-[0_0_10px_#b026ff66] transition-all flex items-center gap-1.5"
+          >
+            Open in CodeLab 💻
+          </a>
+        </div>
         <div className="flex gap-2 mb-4 flex-wrap">
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${diffColors[problem.difficulty]}`}

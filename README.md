@@ -1,275 +1,194 @@
-# 💻 CodeForge
+# ⚡ CodeForge 2.0 — College-Ready DSA Learning & Assessment Ecosystem
 
-### Collaborative Coding & Developer Platform
+![CodeForge Banner](https://img.shields.io/badge/CodeForge-2.0-00f3ff?style=for-the-badge&logo=codeforces&logoColor=black)
+![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
+![Node.js](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-green?style=for-the-badge&logo=nodedotjs)
+![React](https://img.shields.io/badge/Frontend-React%20%7C%20Vite%20%7C%20Tailwind-blue?style=for-the-badge&logo=react)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB%20Atlas-brightgreen?style=for-the-badge&logo=mongodb)
 
-**CodeForge** is a modern web application built to provide developers with a dedicated platform for coding, learning, and collaborating. The project focuses on creating a practical developer-oriented experience with a clean interface and useful tools for programmers.
+> **CodeForge** is an intelligent Data Structures & Algorithms (DSA) learning and assessment ecosystem. It combines a secure multi-language code judge (Judge0 CE), dynamic runtime algorithm visualizer, role-based faculty management portal, AI reasoning evaluation (Gemini), adaptive learning loops, and proctored assessment mode into one integrated platform.
 
----
-
-## 🚀 Features
-
-* 💻 Developer-focused coding environment
-* 🧑‍💻 User-friendly interface for programmers
-* 📚 Coding and learning-oriented experience
-* 🔐 User authentication and account management
-* 📊 Organized user/project experience
-* 📱 Responsive design
-* ⚡ Fast and interactive frontend
-* 🔗 Integrated backend APIs
-* 🗄️ Persistent data management
+**Live Application:** [https://codeforge-eta.vercel.app/](https://codeforge-eta.vercel.app/)
 
 ---
 
-## 🛠️ Tech Stack
+## 🌟 Key Features & Innovations
 
-### Frontend
+### 1. 💻 CodeForge CodeLab (Dedicated Coding Module)
+- **Multi-Language Support**: C++, Java, Python, JavaScript with Monaco Editor integration.
+- **Deterministic Judge Engine**: Code evaluation via sandboxed Judge0 execution (Public, Hidden, Edge, and Stress test cases).
+- **Comprehensive Verdicts**: `Accepted`, `Wrong Answer`, `Time Limit Exceeded`, `Memory Limit Exceeded`, `Compilation Error`, `Runtime Error`.
+- **Granular Test Output**: Pass/fail counters (e.g. `18/20 Passed`), runtime in ms, memory in KB, and detailed submission history.
 
-* React.js
-* JavaScript
-* HTML5
-* CSS3
-* Tailwind CSS
+### 2. 🛡️ Faculty Control Center & Admin Portal (`/admin`)
+- **Role-Based Authentication**: Enforces `STUDENT`, `FACULTY`, and `ADMIN` role permissions.
+- **Separate Faculty Login**: Dedicated login portal with optional passkey verification (`/admin/login`).
+- **Classroom Intervention Analytics**: Overview of total active students, classroom accuracy, topic heatmaps, and automatically flagged at-risk students.
+- **Problem Builder**: Rich problem statement editor, public example manager, hidden test case creator, and reference solution validator (`/admin/problems/new`).
 
-### Backend
+### 3. 🪄 Dynamic Runtime Algorithm Visualizer (`/visualize`)
+- **User-Driven Execution**: Enter any custom array input and select an algorithm.
+- **Dynamic Trace Engine**: Instruments user input into a deterministic step-by-step event trace (`COMPARE`, `SWAP`, `SET`, `HIGHLIGHT`, `FOUND`).
+- **Synchronized Visuals**: Real-time synchronization between bar chart state animations, operation event logs, and line-by-line code highlighting.
 
-* Node.js
-* Express.js
-* REST APIs
-
-### Database
-
-* MongoDB
-* Mongoose
-
-### Tools
-
-* Git
-* GitHub
-* VS Code
-* Postman
-* Vercel
-* Render
+### 4. 🤖 AI Code Review & Reasoning Evaluation (Gemini)
+- **Strict Separation of Concerns**: Judge decides correctness (truth); AI acts as teacher (feedback).
+- **Post-Execution AI Review**: Analyzes code quality, time/space complexity, edge-case coverage, and optimization suggestions after judging.
+- **Voice AI & Speech Analysis**: Evaluates verbal algorithm explanations for clarity, structure, filler word ratio, and DSA concept depth.
 
 ---
 
-## 🏗️ Architecture
+## 🏛️ System Architecture
 
 ```text
-                   ┌─────────────────────┐
-                   │      React.js       │
-                   │      Frontend       │
-                   └──────────┬──────────┘
-                              │
-                         REST APIs
-                              │
-                              ▼
-                   ┌─────────────────────┐
-                   │   Node.js + Express │
-                   │       Backend       │
-                   └──────────┬──────────┘
-                              │
-                              ▼
-                   ┌─────────────────────┐
-                   │      MongoDB        │
-                   │      Database       │
-                   └─────────────────────┘
+                         CODEFORGE ECOSYSTEM
+                                 │
+             ┌───────────────────┴───────────────────┐
+             │                                       │
+      STUDENT PORTAL                            FACULTY PORTAL
+             │                                       │
+     ┌───────┼───────┐                       ┌───────┼───────┐
+   Learn  Practice CodeLab                 Dashboard Questions Analytics
+     │       │       │                       │       │       │
+ Visualizer Editor AI Review               Monitor  Assign  Validate
+     │       │       │                       │       │       │
+     └───────┼───────┘                       └───────┬───────┘
+             │                                       │
+             └───────────────────┬───────────────────┘
+                                 ↓
+                         Node / Express API
+                                 │
+                   ┌─────────────┼─────────────┐
+                   ↓             ↓             ↓
+               Judge0 CE      MongoDB        Gemini AI
+               (Sandbox)      (Atlas)        (Teacher)
 ```
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Technology Stack
 
-```text
-CodeForge/
-│
-├── client/
-│   ├── public/
-│   └── src/
-│       ├── components/
-│       ├── pages/
-│       ├── assets/
-│       ├── context/
-│       ├── services/
-│       ├── App.jsx
-│       └── main.jsx
-│
-├── server/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   ├── config/
-│   └── server.js
-│
-├── .gitignore
-├── README.md
-└── package.json
-```
-
-> Update the structure if your repository uses a different organization.
+- **Frontend**: React 19, Vite, TailwindCSS, Monaco Editor (`@monaco-editor/react`), Lucide React, Framer Motion.
+- **Backend**: Node.js, Express 5, Mongoose (MongoDB Atlas), JWT, BcryptJS, Nodemailer.
+- **Evaluation Layer**: Judge0 CE API (RapidAPI or Self-Hosted), Custom Submission Service.
+- **AI / LLM Integration**: Google Gemini API (`gemini-1.5-flash`), Custom Knowledge Base (RAG).
 
 ---
 
-## ⚙️ Installation
+## 🚀 Quick Start Guide
 
-### Clone the repository
+### Prerequisites
+- Node.js >= 18.0.0
+- MongoDB Atlas Database URI
+- (Optional) Judge0 API Key & Google Gemini API Key
 
-```bash
-git clone https://github.com/YOUR_USERNAME/codeforge.git
-cd codeforge
-```
-
-### Install dependencies
-
-If frontend and backend are separate:
+### 1. Clone & Install Dependencies
 
 ```bash
-cd client
-npm install
+git clone https://github.com/roshann635/CodeForge.git
+cd CodeForge
+
+# Install all dependencies (root, client, server)
+npm run install-all
 ```
 
-```bash
-cd ../server
-npm install
-```
+### 2. Environment Configuration
 
----
+Create a `.env` file inside the `server/` directory (see `server/.env.example`):
 
-## 🔑 Environment Variables
-
-Create a `.env` file in the backend directory.
-
-```env
+```ini
 PORT=5000
-MONGO_URL=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-CLIENT_URL=http://localhost:5173
+MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/codeforge
+JWT_SECRET=your_jwt_secret_here
+ADMIN_KEY=codeforge_admin_2026
+
+# Optional: Judge0 & Gemini API Credentials
+JUDGE0_HOST=judge0-ce.p.rapidapi.com
+JUDGE0_API_KEY=your_rapidapi_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
-> ⚠️ Do not commit your `.env` file or expose sensitive credentials.
+### 3. Seed MongoDB Database
 
----
-
-## ▶️ Run Locally
-
-### Start Backend
+Seed the database with standard DSA problems and test cases:
 
 ```bash
-cd server
-npm run dev
+node server/scripts/seedProblems.js
 ```
 
-### Start Frontend
-
-Open another terminal:
+### 4. Run Development Server
 
 ```bash
+# Start backend server
+npm start
+
+# In a separate terminal, start frontend dev server
 cd client
 npm run dev
 ```
 
-The application will be available at the local URL provided by Vite.
+Visit `http://localhost:5173` for Student Portal or `http://localhost:5173/#/admin/login` for Faculty Portal.
 
 ---
 
-## 🧪 API Testing
-
-Backend APIs can be tested using **Postman**.
-
-Typical API categories include:
+## 📊 Evaluation & Judge Pipeline
 
 ```text
-Authentication
-    ├── Register
-    └── Login
-
-Users
-    ├── Get Users
-    └── User Profile
-
-Projects / Coding
-    ├── Create
-    ├── Read
-    ├── Update
-    └── Delete
+                 STUDENT CODE
+                      │
+                      ▼
+               Select Language
+                      │
+                      ▼
+               CodeForge API
+                      │
+                      ▼
+              Submission Service
+                      │
+                      ▼
+               ┌─────────────┐
+               │  Judge0 CE  │
+               │  Sandbox    │
+               └─────────────┘
+                      │
+          ┌───────────┼───────────┐
+          ▼           ▼           ▼
+       Compile     Execute     Resource
+        Check       Tests       Limits
+          │           │           │
+          └───────────┼───────────┘
+                      ▼
+             Deterministic Verdict
+                      │
+            ┌─────────┴─────────┐
+            ▼                   ▼
+      Student UI             AI Layer
+     (Passed 18/20)        (Explanation)
 ```
 
 ---
 
-## 📸 Screenshots
+## 👥 Roles & Access Controls
 
-### 🏠 Home
-
-*Add your CodeForge homepage screenshot here.*
-
-### 💻 Coding Interface
-
-*Add your coding interface screenshot here.*
-
-### 👤 User Dashboard
-
-*Add your dashboard screenshot here.*
-
----
-
-## 🔮 Future Enhancements
-
-* 🤝 Real-time collaborative coding
-* 👥 Developer communities
-* 🏆 Coding challenges and leaderboards
-* 💬 Developer discussions
-* 🔔 Notifications
-* 📊 Coding analytics
-* 🤖 AI-powered code assistance
-* 🔍 Advanced project and code search
-* 🌐 Public developer profiles
-
----
-
-## 📚 Learning Outcomes
-
-Building CodeForge provided practical experience with:
-
-* Full-stack application development
-* React component architecture
-* REST API development
-* Backend development using Node.js and Express
-* MongoDB database design
-* Authentication and authorization
-* CRUD operations
-* Frontend-backend integration
-* API testing
-* Deployment and production configuration
-
----
-
-## 🌐 Deployment
-
-The application can be deployed using:
-
-* **Frontend:** Vercel
-* **Backend:** Render
-* **Database:** MongoDB Atlas
-
-Add your deployed application URL here:
-
-**Live Demo:** `YOUR_LIVE_URL`
+| Feature | Student | Faculty | Admin |
+| :--- | :---: | :---: | :---: |
+| CodeLab IDE & Submissions | ✅ | ✅ | ✅ |
+| Dynamic Visualizer & Learn Path | ✅ | ✅ | ✅ |
+| Voice AI Interview Prep | ✅ | ✅ | ✅ |
+| Create & Edit Problems | ❌ | ✅ | ✅ |
+| Add Public & Hidden Test Cases | ❌ | ✅ | ✅ |
+| Class Analytics & At-Risk Tracking | ❌ | ✅ | ✅ |
+| Manage System Users & Roles | ❌ | ❌ | ✅ |
 
 ---
 
 ## 👨‍💻 Developer
 
 ### Roshan Jadhav
-
-Computer Science Engineering Student
-Full-Stack Developer • AI/ML Enthusiast
+Computer Science Engineering Student • Full-Stack Developer • AI/ML Enthusiast
 
 ---
 
-## ⭐ Support
+## 📜 License
 
-If you found CodeForge interesting, consider giving this repository a ⭐.
-
----
-
-### Built with ❤️ by Roshan Jadhav
+This project is open-source and available under the [MIT License](LICENSE).

@@ -23,6 +23,23 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  role: {
+    type: String,
+    enum: ['STUDENT', 'FACULTY', 'ADMIN'],
+    default: 'STUDENT',
+  },
+  department: {
+    type: String,
+    default: 'CSE',
+  },
+  batch: {
+    type: String,
+    default: '2nd Year',
+  },
+  division: {
+    type: String,
+    default: 'Division A',
+  },
   registrationOtp: {
     type: String,
   },

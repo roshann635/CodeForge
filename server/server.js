@@ -11,6 +11,8 @@ const authRouter = require("./routes/auth").router;
 const codeRoutes = require("./routes/code");
 const interviewRoutes = require("./routes/interview");
 const proctorRoutes = require("./routes/proctor");
+const adminRoutes = require("./routes/admin");
+const assignmentRoutes = require("./routes/assignments");
 
 const app = express();
 
@@ -48,6 +50,12 @@ app.use("/api/interview", interviewRoutes);
 
 // Proctoring routes
 app.use("/api/proctor", proctorRoutes);
+
+// Admin & Faculty routes
+app.use("/api/admin", adminRoutes);
+
+// Assignment routes
+app.use("/api/assignments", assignmentRoutes);
 
 app.get("/health", (req, res) => res.send("CodeForge Backend is Running"));
 

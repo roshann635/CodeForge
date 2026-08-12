@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { BarChart3, Search, Link2, TreePine, GitFork, Layers, Hash, Triangle } from 'lucide-react';
+import { BarChart3, Search, Link2, TreePine, GitFork, Layers, Hash, Triangle, Sparkles } from 'lucide-react';
+import DynamicVisualizer from './DynamicVisualizer';
 import SortingVisualizer from './visualizers/SortingVisualizer';
 import SearchingVisualizer from './visualizers/SearchingVisualizer';
 import LinkedListVisualizer from './visualizers/LinkedListVisualizer';
@@ -10,6 +11,7 @@ import HashTableVisualizer from './visualizers/HashTableVisualizer';
 import HeapVisualizer from './visualizers/HeapVisualizer';
 
 const CATEGORIES = [
+  { key: 'dynamic', label: 'Dynamic Runtime Engine', icon: Sparkles, color: 'neon-cyan', desc: 'User-driven array & code trace synchronization' },
   { key: 'sorting', label: 'Sorting', icon: BarChart3, color: 'neon-cyan', desc: 'Bubble, Selection, Insertion, Merge, Quick Sort' },
   { key: 'searching', label: 'Searching', icon: Search, color: 'neon-green', desc: 'Linear Search, Binary Search' },
   { key: 'linkedlist', label: 'Linked List', icon: Link2, color: 'neon-magenta', desc: 'Insert, Delete, Search, Traverse' },
@@ -29,6 +31,7 @@ const colorMap = {
 };
 
 const VISUALIZER_COMPONENTS = {
+  dynamic: DynamicVisualizer,
   sorting: SortingVisualizer,
   searching: SearchingVisualizer,
   linkedlist: LinkedListVisualizer,
@@ -40,7 +43,7 @@ const VISUALIZER_COMPONENTS = {
 };
 
 export default function Visualizer() {
-  const [activeCategory, setActiveCategory] = useState('sorting');
+  const [activeCategory, setActiveCategory] = useState('dynamic');
   const ActiveComponent = VISUALIZER_COMPONENTS[activeCategory];
   const activeCat = CATEGORIES.find(c => c.key === activeCategory);
 

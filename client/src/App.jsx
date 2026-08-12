@@ -17,11 +17,13 @@ import {
   X,
   Trophy,
   User,
+  Shield,
 } from "lucide-react";
-import { AuthContext } from "./context/AuthContext";
+import { AuthContext, AuthProvider } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Visualizer from "./pages/Visualizer";
 import Practice from "./pages/Practice";
+import CodeLab from "./pages/CodeLab";
 import Learn from "./pages/Learn";
 import Quiz from "./pages/Quiz";
 import InterviewPrep from "./pages/InterviewPrep";
@@ -29,7 +31,9 @@ import AuthPage from "./pages/AuthPage";
 import LandingPage from "./pages/LandingPage";
 import Profile from "./pages/Profile";
 import Leaderboard from "./pages/Leaderboard";
-import { AuthProvider } from "./context/AuthContext";
+import AdminLogin from "./pages/admin/AdminLogin";
+import FacultyDashboard from "./pages/admin/FacultyDashboard";
+import ProblemBuilder from "./pages/admin/ProblemBuilder";
 
 function MainLayout() {
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -52,19 +56,21 @@ function MainLayout() {
   }, []);
 
   const searchResults = [
+    { title: "Two Sum CodeLab", type: "CodeLab", path: "/codelab/1", icon: Terminal },
+    { title: "Binary Search CodeLab", type: "CodeLab", path: "/codelab/2", icon: Terminal },
     { title: "Two Sum", type: "Problem", path: "/practice", icon: Code },
     { title: "Binary Search", type: "Algorithm", path: "/visualize", icon: BarChart3 },
     { title: "Bubble Sort", type: "Algorithm", path: "/visualize", icon: BarChart3 },
-    { title: "Arrays Quiz", type: "Quiz", path: "/quiz/arrays", icon: BookOpen },
-    { title: "Interview Prep", type: "Practice", path: "/interview", icon: Mic },
+    { title: "Faculty Control", type: "Portal", path: "/admin/dashboard", icon: Shield },
   ].filter(
     (item) =>
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.type.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const hideSidebarRoutes = ["/", "/login"];
-  const shouldShowSidebar = !hideSidebarRoutes.includes(location.pathname);
+  const hideSidebarRoutes = ["/", "/login", "/admin/login"];
+  const isCodeLabRoute = location.pathname.startsWith("/codelab");
+  const shouldShowSidebar = !hideSidebarRoutes.includes(location.pathname) && !isCodeLabRoute;
 
   return (
     <div className="flex bg-dark-900 min-h-screen">
@@ -104,9 +110,6 @@ function MainLayout() {
                     </div>
                   </Link>
                 ))}
-                {searchQuery && searchResults.length === 0 && (
-                  <p className="text-gray-400 text-center py-4">No results found for "{searchQuery}"</p>
-                )}
               </div>
             </div>
           </div>
@@ -114,7 +117,7 @@ function MainLayout() {
       )}
 
       {/* Main Content Pane */}
-      <main className="flex-1 p-6 relative overflow-hidden h-screen overflow-y-auto w-full">
+      <main className={`flex-1 relative overflow-hidden h-screen overflow-y-auto w-full ${isCodeLabRoute ? 'p-0' : 'p-6'}`}>
         {shouldShowSidebar && (
           <>
             <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-neon-purple/10 rounded-full blur-[120px] pointer-events-none"></div>
@@ -131,9 +134,15 @@ function MainLayout() {
           <Route path="/learn" element={<Learn />} />
           <Route path="/visualize" element={<Visualizer />} />
           <Route path="/practice" element={<Practice />} />
+          <Route path="/codelab/:problemId" element={<CodeLab />} />
           <Route path="/interview" element={<InterviewPrep />} />
           <Route path="/quiz/:topic" element={<Quiz />} />
           <Route path="/quiz" element={<Quiz />} />
+
+          {/* Faculty / Admin Portal Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<FacultyDashboard />} />
+          <Route path="/admin/problems/new" element={<ProblemBuilder />} />
         </Routes>
       </main>
     </div>
@@ -152,7 +161,7 @@ function App() {
 
 function Sidebar({ setSearchOpen }) {
   const location = useLocation();
-  const { user } = React.useContext(AuthContext);
+  const { user, isFaculty } = React.useContext(AuthContext);
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", matchExact: true },
@@ -161,9 +170,13 @@ function Sidebar({ setSearchOpen }) {
     { to: "/learn", icon: BookOpen, label: "Learn Path" },
     { to: "/visualize", icon: BarChart3, label: "Visualizer" },
     { to: "/practice", icon: Terminal, label: "Practice HQ" },
+    { to: "/codelab/1", icon: Terminal, label: "CodeLab IDE" },
     { to: "/interview", icon: Mic, label: "Interview Prep" },
   ];
 
+  if (isFaculty) {
+    navItems.push({ to: "/admin/dashboard", icon: Shield, label: "Faculty Portal" });
+  }
 
   const handleSearchClick = () => {
     setSearchOpen(true);
@@ -179,7 +192,6 @@ function Sidebar({ setSearchOpen }) {
       </div>
 
       <nav className="w-full flex-1 px-3 space-y-1">
-        {/* Search Button */}
         <button
           onClick={handleSearchClick}
           className="w-full text-left px-4 py-2.5 rounded-xl transition-all duration-200 group relative bg-transparent border border-dark-600 hover:border-neon-cyan/50 hover:bg-dark-700/50"
@@ -238,21 +250,18 @@ function Sidebar({ setSearchOpen }) {
             </div>
             <div className="min-w-0">
                <p className="text-xs font-bold text-white truncate">{user.name || "Operator"}</p>
-               <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+               <p className="text-[10px] text-gray-500 truncate">{user.role || "STUDENT"}</p>
             </div>
           </div>
         )}
-        
 
-        <div className="border-t border-dark-700 pt-4 mt-4">
-          <div className="bg-dark-900/50 border border-dark-700 rounded-xl p-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-              Built for
-            </p>
-            <p className="text-xs text-neon-cyan font-orbitron font-medium">
-              DSA Enthusiasts
-            </p>
-          </div>
+        <div className="border-t border-dark-700 pt-4 mt-4 space-y-2">
+          <Link
+            to="/admin/login"
+            className="block text-center text-xs text-neon-purple hover:underline font-orbitron"
+          >
+            Faculty Portal Login →
+          </Link>
         </div>
       </div>
     </aside>

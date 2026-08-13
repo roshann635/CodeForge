@@ -18,16 +18,14 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, "") : "",
   },
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  socketTimeout: 5000,
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || "codeforge_hackathon_super_secret_key_123!";
@@ -92,7 +90,7 @@ router.post("/register", async (req, res) => {
             `,
           }),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Email server connection timed out")), 5000)
+            setTimeout(() => reject(new Error("Email server connection timed out")), 10000)
           ),
         ]);
       } catch (mailErr) {
@@ -317,7 +315,7 @@ router.post("/forgot-password", async (req, res) => {
             `,
           }),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Email server connection timed out")), 5000)
+            setTimeout(() => reject(new Error("Email server connection timed out")), 10000)
           ),
         ]);
       } catch (mailErr) {

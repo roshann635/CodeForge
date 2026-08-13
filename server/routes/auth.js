@@ -2,6 +2,8 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
+const { protect } = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 const pendingUsers = new Map();
@@ -372,9 +374,6 @@ router.post("/reset-password", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
-const { protect } = require("../middleware/authMiddleware");
-const { requireRole } = require("../middleware/roleMiddleware");
 
 // @desc    Create faculty account (Admin only)
 // @route   POST /api/auth/create-faculty

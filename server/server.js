@@ -70,7 +70,7 @@ if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
 
   // Catch-all: send index.html for client-side routing (must be AFTER API routes)
-  app.get("*", (req, res) => {
+  app.use((req, res) => {
     res.sendFile(path.join(clientDistPath, "index.html"));
   });
   console.log("📦 Serving client build from:", clientDistPath);

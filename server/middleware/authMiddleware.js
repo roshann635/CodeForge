@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { JWT_SECRET } = require('../routes/auth');
+
+const JWT_SECRET = process.env.JWT_SECRET || "codeforge_hackathon_super_secret_key_123!";
 
 const protect = async (req, res, next) => {
     let token;

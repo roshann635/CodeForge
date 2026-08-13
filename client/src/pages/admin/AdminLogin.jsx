@@ -1,12 +1,14 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import { Shield, Lock, Mail, Key, Terminal, ArrowRight } from "lucide-react";
+import { Shield, Lock, Mail, Key, Terminal, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [adminKey, setAdminKey] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showAdminKey, setShowAdminKey] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -70,13 +72,21 @@ export default function AdminLogin() {
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neon-purple transition-all"
+                className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neon-purple transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
@@ -85,12 +95,20 @@ export default function AdminLogin() {
             <div className="relative">
               <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input
-                type="password"
+                type={showAdminKey ? "text" : "password"}
                 value={adminKey}
                 onChange={(e) => setAdminKey(e.target.value)}
                 placeholder="Key (Default: codeforge_admin_2026)"
-                className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neon-purple transition-all"
+                className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neon-purple transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowAdminKey(!showAdminKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                aria-label={showAdminKey ? "Hide passkey" : "Show passkey"}
+              >
+                {showAdminKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 

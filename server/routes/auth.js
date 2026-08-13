@@ -23,6 +23,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000,
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || "codeforge_hackathon_super_secret_key_123!";
@@ -36,42 +39,64 @@ const generateToken = (id) => {
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password, role, department, batch, division } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "Please provide name, email, and password." });
+    }
 
-    let user = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+
+    let user = await User.findOne({ email: cleanEmail });
     if (user && user.isVerified !== false) {
       return res.status(400).json({ message: "User already exists with this email." });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000;
 
-    pendingUsers.set(email, {
+    pendingUsers.set(cleanEmail, {
       name,
-      email,
+      email: cleanEmail,
       password,
       role: role || "STUDENT",
       department: department || "CSE",
       batch: batch || "2nd Year",
       division: division || "Division A",
       otp,
-      expires: Date.now() + 10 * 60 * 1000,
+      expires,
     });
 
+    if (user && user.isVerified === false) {
+      user.registrationOtp = otp;
+      user.registrationOtpExpires = new Date(expires);
+      await user.save();
+    }
+
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      console.log(`Sending verification email to: ${email}`);
-      await transporter.sendMail({
-        from: `"CodeForge" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: "CodeForge - Verify Your Identity",
-        html: `
-            <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
-                <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Registration</h2>
-                <p>Operator, verify your identity to join the grid.</p>
-                <p>Your access code is:</p>
-                <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
-                <p>This code will self-destruct in 10 minutes.</p>
-            </div>
-        `,
-      });
+      console.log(`Sending verification email to: ${cleanEmail}`);
+      try {
+        await Promise.race([
+          transporter.sendMail({
+            from: `"CodeForge" <${process.env.EMAIL_USER}>`,
+            to: cleanEmail,
+            subject: "CodeForge - Verify Your Identity",
+            html: `
+                <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
+                    <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Registration</h2>
+                    <p>Operator, verify your identity to join the grid.</p>
+                    <p>Your access code is:</p>
+                    <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
+                    <p>This code will self-destruct in 10 minutes.</p>
+                </div>
+            `,
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Email server connection timed out")), 5000)
+          ),
+        ]);
+      } catch (mailErr) {
+        console.error("Email sending failed or timed out:", mailErr.message);
+        console.log(`[FALLBACK REGISTRATION OTP for ${cleanEmail}]: ${otp}`);
+      }
     } else {
       console.log("Mock Email Sent. Registration OTP:", otp);
     }
@@ -88,41 +113,76 @@ router.post("/register", async (req, res) => {
 router.post("/verify-registration", async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const pendingUser = pendingUsers.get(email);
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    let pendingUser = pendingUsers.get(cleanEmail);
 
-    if (!pendingUser) {
-      return res.status(400).json({ message: "Registration session expired or not found. Please register again." });
+    let user = await User.findOne({ email: cleanEmail });
+
+    let validOtp = false;
+    let name = pendingUser?.name;
+    let password = pendingUser?.password;
+    let role = pendingUser?.role || "STUDENT";
+    let department = pendingUser?.department || "CSE";
+    let batch = pendingUser?.batch || "2nd Year";
+    let division = pendingUser?.division || "Division A";
+
+    if (pendingUser) {
+      if (pendingUser.otp === otp && pendingUser.expires >= Date.now()) {
+        validOtp = true;
+      }
+    } else if (user && user.registrationOtp) {
+      if (user.registrationOtp === otp && user.registrationOtpExpires && new Date(user.registrationOtpExpires).getTime() >= Date.now()) {
+        validOtp = true;
+        name = name || user.name;
+        role = role || user.role;
+        department = department || user.department;
+        batch = batch || user.batch;
+        division = division || user.division;
+      }
     }
 
-    if (pendingUser.otp !== otp || pendingUser.expires < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+    if (!validOtp) {
+      return res.status(400).json({ message: "Invalid or expired OTP. Please register again." });
     }
 
-    const user = await User.create({
-      name: pendingUser.name,
-      email: pendingUser.email,
-      password: pendingUser.password,
-      role: pendingUser.role || "STUDENT",
-      department: pendingUser.department,
-      batch: pendingUser.batch,
-      division: pendingUser.division,
-      isVerified: true,
-      progress: {
-        problemsSolved: 0,
-        accuracy: 100,
-        placementReadiness: 0,
-        weakAreas: [],
-        recentActivity: [
-          {
-            type: "system",
-            text: "Identity Verified. Operator active.",
-            time: new Date(),
-          },
-        ],
-      },
-    });
+    if (user) {
+      if (name) user.name = name;
+      if (password) user.password = password;
+      user.role = role;
+      user.department = department;
+      user.batch = batch;
+      user.division = division;
+      user.isVerified = true;
+      user.registrationOtp = undefined;
+      user.registrationOtpExpires = undefined;
+      await user.save();
+    } else {
+      user = await User.create({
+        name: name || "Operator",
+        email: cleanEmail,
+        password: password,
+        role: role,
+        department: department,
+        batch: batch,
+        division: division,
+        isVerified: true,
+        progress: {
+          problemsSolved: 0,
+          accuracy: 100,
+          placementReadiness: 0,
+          weakAreas: [],
+          recentActivity: [
+            {
+              type: "system",
+              text: "Identity Verified. Operator active.",
+              time: new Date(),
+            },
+          ],
+        },
+      });
+    }
 
-    pendingUsers.delete(email);
+    pendingUsers.delete(cleanEmail);
 
     res.status(201).json({
       _id: user._id,
@@ -135,6 +195,7 @@ router.post("/verify-registration", async (req, res) => {
       token: generateToken(user._id),
     });
   } catch (error) {
+    console.error("Verification Error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -144,7 +205,8 @@ router.post("/verify-registration", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    const user = await User.findOne({ email: cleanEmail });
 
     if (user && (await user.matchPassword(password))) {
       if (user.isVerified === false) {
@@ -173,17 +235,16 @@ router.post("/login", async (req, res) => {
 router.post("/admin-login", async (req, res) => {
   try {
     const { email, password, adminKey } = req.body;
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: cleanEmail });
 
-    // Allow auto-upgrading to ADMIN or FACULTY if adminKey is provided (e.g. "codeforge_admin_secret")
     const DEFAULT_ADMIN_KEY = process.env.ADMIN_KEY || "codeforge_admin_2026";
 
     if (!user && adminKey === DEFAULT_ADMIN_KEY) {
-      // Auto-create Admin Account on first login with key
       user = await User.create({
         name: "Faculty Admin",
-        email,
+        email: cleanEmail,
         password,
         role: "ADMIN",
         isVerified: true,
@@ -223,7 +284,8 @@ router.post("/admin-login", async (req, res) => {
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    const user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -236,20 +298,30 @@ router.post("/forgot-password", async (req, res) => {
     await user.save();
 
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      await transporter.sendMail({
-        from: `"CodeForge" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: "CodeForge - Password Reset OTP",
-        html: `
-            <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
-                <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Password Reset</h2>
-                <p>Operator, we received a request to reset your password.</p>
-                <p>Your authentication code is:</p>
-                <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
-                <p>This code will self-destruct in 10 minutes.</p>
-            </div>
-        `,
-      });
+      try {
+        await Promise.race([
+          transporter.sendMail({
+            from: `"CodeForge" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: "CodeForge - Password Reset OTP",
+            html: `
+                <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
+                    <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Password Reset</h2>
+                    <p>Operator, we received a request to reset your password.</p>
+                    <p>Your authentication code is:</p>
+                    <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
+                    <p>This code will self-destruct in 10 minutes.</p>
+                </div>
+            `,
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Email server connection timed out")), 5000)
+          ),
+        ]);
+      } catch (mailErr) {
+        console.error("Password reset email failed or timed out:", mailErr.message);
+        console.log(`[FALLBACK RESET OTP for ${cleanEmail}]: ${otp}`);
+      }
     } else {
       console.log("Mock Email Sent. OTP:", otp);
     }
@@ -265,7 +337,8 @@ router.post("/forgot-password", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const user = await User.findOne({ email });
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    const user = await User.findOne({ email: cleanEmail });
 
     if (!user || user.resetOtp !== otp || user.resetOtpExpires < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -282,7 +355,8 @@ router.post("/verify-otp", async (req, res) => {
 router.post("/reset-password", async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
-    const user = await User.findOne({ email });
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    const user = await User.findOne({ email: cleanEmail });
 
     if (!user || user.resetOtp !== otp || user.resetOtpExpires < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -307,14 +381,15 @@ const { requireRole } = require("../middleware/roleMiddleware");
 router.post("/create-faculty", protect, requireRole("ADMIN"), async (req, res) => {
   try {
     const { name, email, password, department, batch, division } = req.body;
-    const existing = await User.findOne({ email });
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    const existing = await User.findOne({ email: cleanEmail });
     if (existing) {
       return res.status(400).json({ message: "User already exists with this email." });
     }
 
     const user = await User.create({
       name,
-      email,
+      email: cleanEmail,
       password,
       role: "FACULTY",
       department: department || "CSE",
@@ -356,3 +431,4 @@ router.get("/users", protect, requireRole("ADMIN"), async (req, res) => {
 });
 
 module.exports = { router, JWT_SECRET };
+

@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Terminal, Mail, Lock, LogIn, UserPlus, KeyRound, ShieldAlert } from 'lucide-react';
+import { Terminal, Mail, Lock, LogIn, UserPlus, KeyRound, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import API_BASE from '../config/api';
 
 export default function AuthPage() {
@@ -10,6 +10,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -53,13 +54,32 @@ export default function AuthPage() {
     }
   };
 
+  const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      if (err.name === "AbortError") {
+        throw new Error("Request timed out. Please check your network connection and try again.");
+      }
+      throw err;
+    }
+  };
+
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+      const res = await fetchWithTimeout(`${API_BASE}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -81,7 +101,7 @@ export default function AuthPage() {
     setSuccessMsg('');
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      const res = await fetchWithTimeout(`${API_BASE}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp })
@@ -103,7 +123,7 @@ export default function AuthPage() {
     setSuccessMsg('');
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+      const res = await fetchWithTimeout(`${API_BASE}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp, newPassword: password })
@@ -144,7 +164,23 @@ export default function AuthPage() {
             <label className="block text-xs font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Encryption Key (Password)</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-dark-900 border border-dark-600 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-neon-purple/80 focus:ring-1 focus:ring-neon-purple/50 transition-all font-mono text-sm" placeholder="••••••••" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full bg-dark-900 border border-dark-600 rounded-xl py-3 pl-10 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-neon-purple/80 focus:ring-1 focus:ring-neon-purple/50 transition-all font-mono text-sm"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
           {mode === 'login' && (
@@ -220,7 +256,23 @@ export default function AuthPage() {
             <label className="block text-xs font-mono text-gray-400 mb-1.5 uppercase tracking-wider">New Encryption Key</label>
             <div className="relative">
               <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-dark-900 border border-dark-600 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-neon-purple/80 focus:ring-1 focus:ring-neon-purple/50 transition-all font-mono text-sm" placeholder="New Password" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full bg-dark-900 border border-dark-600 rounded-xl py-3 pl-10 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-neon-purple/80 focus:ring-1 focus:ring-neon-purple/50 transition-all font-mono text-sm"
+                placeholder="New Password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
           <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 bg-neon-purple/20 text-neon-purple border border-neon-purple hover:bg-neon-purple hover:text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(188,19,254,0.2)] disabled:opacity-50">

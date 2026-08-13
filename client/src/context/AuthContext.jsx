@@ -47,8 +47,27 @@ export const AuthProvider = ({ children }) => {
     if (data.department) localStorage.setItem("codeforge_dept", data.department);
   };
 
+  const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      if (err.name === "AbortError") {
+        throw new Error("Request timed out. Please check your network connection and try again.");
+      }
+      throw err;
+    }
+  };
+
   const login = async (email, password) => {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -61,7 +80,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const adminLogin = async (email, password, adminKey) => {
-    const res = await fetch(`${API_BASE}/api/auth/admin-login`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/admin-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, adminKey }),
@@ -74,7 +93,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (name, email, password, role = "STUDENT", department = "CSE") => {
-    const res = await fetch(`${API_BASE}/api/auth/register`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password, role, department }),
@@ -86,7 +105,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const verifyRegistration = async (email, otp) => {
-    const res = await fetch(`${API_BASE}/api/auth/verify-registration`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/verify-registration`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, otp }),

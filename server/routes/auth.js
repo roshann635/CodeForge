@@ -28,6 +28,56 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 10000,
 });
 
+const sendMailHelper = async ({ to, subject, html, otp }) => {
+  console.log(`📧 Dispatching email to: ${to}`);
+
+  // 1. Resend API (HTTPS Port 443 - 100% bypasses cloud SMTP port blocks on Render/Vercel)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const { Resend } = require("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const fromEmail = process.env.EMAIL_FROM || "CodeForge <onboarding@resend.dev>";
+      const response = await resend.emails.send({
+        from: fromEmail,
+        to: [to],
+        subject: subject,
+        html: html,
+      });
+      console.log(`✅ Resend Email sent to ${to}. Message ID:`, response?.data?.id || response?.id);
+      return true;
+    } catch (resendErr) {
+      console.error("❌ Resend API Error:", resendErr.message);
+    }
+  }
+
+  // 2. Nodemailer Gmail SMTP
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    try {
+      await Promise.race([
+        transporter.sendMail({
+          from: `"CodeForge" <${process.env.EMAIL_USER}>`,
+          to: to,
+          subject: subject,
+          html: html,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Email server connection timed out (10s)")), 10000)
+        ),
+      ]);
+      console.log(`✅ Nodemailer Gmail Email sent successfully to ${to}`);
+      return true;
+    } catch (mailErr) {
+      console.error("❌ Nodemailer SMTP Error:", mailErr.message);
+      if (mailErr.message.includes("timed out") || mailErr.code === "ETIMEDOUT") {
+        console.error("⚠️ Render Notice: Outbound SMTP ports (465/587) are blocked by Render. Set RESEND_API_KEY on Render for HTTP API delivery.");
+      }
+    }
+  }
+
+  console.log(`[FALLBACK REGISTRATION OTP for ${to}]: ${otp}`);
+  return false;
+};
+
 const JWT_SECRET = process.env.JWT_SECRET || "codeforge_hackathon_super_secret_key_123!";
 
 const generateToken = (id) => {
@@ -71,35 +121,20 @@ router.post("/register", async (req, res) => {
       await user.save();
     }
 
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      console.log(`Sending verification email to: ${cleanEmail}`);
-      try {
-        await Promise.race([
-          transporter.sendMail({
-            from: `"CodeForge" <${process.env.EMAIL_USER}>`,
-            to: cleanEmail,
-            subject: "CodeForge - Verify Your Identity",
-            html: `
-                <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
-                    <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Registration</h2>
-                    <p>Operator, verify your identity to join the grid.</p>
-                    <p>Your access code is:</p>
-                    <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
-                    <p>This code will self-destruct in 10 minutes.</p>
-                </div>
-            `,
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Email server connection timed out")), 10000)
-          ),
-        ]);
-      } catch (mailErr) {
-        console.error("Email sending failed or timed out:", mailErr.message);
-        console.log(`[FALLBACK REGISTRATION OTP for ${cleanEmail}]: ${otp}`);
-      }
-    } else {
-      console.log("Mock Email Sent. Registration OTP:", otp);
-    }
+    await sendMailHelper({
+      to: cleanEmail,
+      subject: "CodeForge - Verify Your Identity",
+      html: `
+          <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
+              <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Registration</h2>
+              <p>Operator, verify your identity to join the grid.</p>
+              <p>Your access code is:</p>
+              <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
+              <p>This code will self-destruct in 10 minutes.</p>
+          </div>
+      `,
+      otp,
+    });
 
     res.status(200).json({ message: "OTP sent to email for verification" });
   } catch (error) {
@@ -297,34 +332,20 @@ router.post("/forgot-password", async (req, res) => {
     user.resetOtpExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      try {
-        await Promise.race([
-          transporter.sendMail({
-            from: `"CodeForge" <${process.env.EMAIL_USER}>`,
-            to: user.email,
-            subject: "CodeForge - Password Reset OTP",
-            html: `
-                <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
-                    <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Password Reset</h2>
-                    <p>Operator, we received a request to reset your password.</p>
-                    <p>Your authentication code is:</p>
-                    <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
-                    <p>This code will self-destruct in 10 minutes.</p>
-                </div>
-            `,
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Email server connection timed out")), 10000)
-          ),
-        ]);
-      } catch (mailErr) {
-        console.error("Password reset email failed or timed out:", mailErr.message);
-        console.log(`[FALLBACK RESET OTP for ${cleanEmail}]: ${otp}`);
-      }
-    } else {
-      console.log("Mock Email Sent. OTP:", otp);
-    }
+    await sendMailHelper({
+      to: cleanEmail,
+      subject: "CodeForge - Password Reset OTP",
+      html: `
+          <div style="font-family: Arial, sans-serif; background: #0a0a0a; padding: 20px; color: #fff; border: 1px solid #00f3ff; border-radius: 8px;">
+              <h2 style="color: #00f3ff; margin-bottom: 20px;">CodeForge Password Reset</h2>
+              <p>Operator, we received a request to reset your password.</p>
+              <p>Your authentication code is:</p>
+              <h1 style="color: #bc13fe; letter-spacing: 4px; padding: 10px; background: #111; border: 1px solid #333; display: inline-block;">${otp}</h1>
+              <p>This code will self-destruct in 10 minutes.</p>
+          </div>
+      `,
+      otp,
+    });
 
     res.json({ message: "OTP sent to email" });
   } catch (error) {

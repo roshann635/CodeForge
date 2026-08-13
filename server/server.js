@@ -61,7 +61,7 @@ app.use("/api/assignments", assignmentRoutes);
 // Faculty analytics routes
 app.use("/api/analytics", analyticsRoutes);
 
-app.get("/health", (req, res) => res.send("CodeForge Backend is Running"));
+app.get("/health", (req, res) => res.status(200).send("CodeForge Backend is Running"));
 
 // Serve static files from the React app build directory (production)
 const clientDistPath = path.join(__dirname, "../client/dist");
@@ -78,8 +78,11 @@ if (fs.existsSync(clientDistPath)) {
   console.log("⚠️  Client build not found at:", clientDistPath);
   console.log("   Current Directory:", process.cwd());
   console.log("   Run 'npm run build' in /client to generate production build");
+  app.get("/", (req, res) => {
+    res.status(200).send("CodeForge Backend API is running. Client build pending.");
+  });
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 CodeForge Server running on port ${PORT}`);
 });

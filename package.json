@@ -7,7 +7,7 @@
     "build": "cd client && npm install && npm run build && cd ../server && npm install",
     "start": "cd server && node server.js",
     "dev": "cd server && node server.js",
-    "judge0:start": "cd judge0 && docker compose up -d db redis && timeout /t 15 && docker compose up -d",
+    "judge0:start": "cd judge0 && docker compose up -d db redis && sleep 15 && docker compose up -d",
     "judge0:test": "cd server && node scripts/testJudge0.js"
   },
   "engines": {

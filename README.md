@@ -1,4 +1,4 @@
-# ⚡ CodeForge 2.0 — College-Ready DSA Learning & Assessment Ecosystem
+# ⚡ CodeForge — College-Ready DSA Learning & Assessment Ecosystem
 
 ![CodeForge Banner](https://img.shields.io/badge/CodeForge-2.0-00f3ff?style=for-the-badge&logo=codeforces&logoColor=black)
 ![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
